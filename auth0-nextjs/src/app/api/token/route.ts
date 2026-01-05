@@ -34,23 +34,21 @@ export async function GET() {
       
       if (!isManagementAPI && audience) {
         console.log("Using AUTH0_AUDIENCE:", audience);
-        const { accessToken } = await auth0.getAccessToken({
-          authorizationParams: {
-            audience: audience
-          }
+        const { token } = await auth0.getAccessToken({
+          audience: audience
         });
         
-        if (accessToken) {
+        if (token) {
           console.log("Access token received via getAccessToken");
-          tokenToUse = accessToken;
+          tokenToUse = token;
         }
       } else {
         // Try without audience (for ID token)
         console.log("Trying to get token without audience (ID token)...");
         try {
-          const { accessToken } = await auth0.getAccessToken();
-          if (accessToken) {
-            tokenToUse = accessToken;
+          const { token } = await auth0.getAccessToken();
+          if (token) {
+            tokenToUse = token;
           }
         } catch {
           console.log("getAccessToken() without audience failed, trying alternative...");

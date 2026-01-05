@@ -8,8 +8,14 @@ export async function GET(request: NextRequest) {
     const session = await auth0.getSession();
     
     if (!session?.user) {
-      return NextResponse.redirect(new URL("/", request.url));
+      // If no session, redirect to login
+      return NextResponse.redirect(new URL("/auth/login", request.url));
     }
+
+    // Get redirect URL from query params or use default
+    const redirectUrl = request.nextUrl.searchParams.get("redirect") || 
+                       process.env.NEXT_PUBLIC_FASTAPI_URL || 
+                       "http://localhost:8000";
 
     // Get access token with audience for FastAPI
     const audience = process.env.AUTH0_AUDIENCE;
@@ -29,12 +35,17 @@ export async function GET(request: NextRequest) {
       console.error("Could not get access token:", e);
     }
 
-    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
+    // Redirect to FastAPI with token if available
     if (token) {
-      return NextResponse.redirect(`${fastApiUrl}?token=${encodeURIComponent(token)}`);
+      return NextResponse.redirect(`${redirectUrl}?token=${encodeURIComponent(token)}`);
     } else {
-      // Fallback: redirect without token (FastAPI can handle via user info)
-      return NextResponse.redirect(fastApiUrl);
+      // Fallback: redirect with user info
+      const userInfo = {
+        email: session.user.email,
+        name: session.user.name,
+        sub: session.user.sub
+      };
+      return NextResponse.redirect(`${redirectUrl}?user=${encodeURIComponent(JSON.stringify(userInfo))}`);
     }
   } catch (error) {
     console.error("Error in auth callback:", error);
