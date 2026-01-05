@@ -54,6 +54,9 @@ export async function GET(request: NextRequest) {
     };
 
     try {
+      console.log("Calling FastAPI callback endpoint:", `${fastApiUrl}/api/auth/callback`);
+      console.log("User info being sent:", userInfo);
+      
       const callbackResponse = await fetch(`${fastApiUrl}/api/auth/callback`, {
         method: "POST",
         headers: {
@@ -63,21 +66,36 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify(userInfo)
       });
 
+      console.log("FastAPI response status:", callbackResponse.status);
+
       if (callbackResponse.ok) {
         const userData = await callbackResponse.json();
-        console.log("User registered/updated in FastAPI:", userData.user_id);
+        console.log("User registered/updated in FastAPI:", userData);
         
-        // Redirect to FastAPI with user_id - FastAPI HTML will handle showing the chat
-        return NextResponse.redirect(`${fastApiUrl}?userId=${userData.user_id}`);
+        if (userData.user_id) {
+          // Redirect to FastAPI with user_id - FastAPI HTML will handle showing the chat
+          const redirectUrl = `${fastApiUrl}?userId=${userData.user_id}`;
+          console.log("Redirecting to FastAPI:", redirectUrl);
+          // Use new URL() to ensure absolute redirect (not relative)
+          return NextResponse.redirect(new URL(redirectUrl));
+        } else {
+          console.error("No user_id in response:", userData);
+          // Fallback: redirect with user info
+          const fallbackUrl = `${fastApiUrl}?user=${encodeURIComponent(JSON.stringify(userInfo))}`;
+          return NextResponse.redirect(new URL(fallbackUrl));
+        }
       } else {
-        console.error("Failed to register user in FastAPI:", await callbackResponse.text());
+        const errorText = await callbackResponse.text();
+        console.error("Failed to register user in FastAPI. Status:", callbackResponse.status, "Error:", errorText);
         // Fallback: redirect with user info anyway
-        return NextResponse.redirect(`${fastApiUrl}?user=${encodeURIComponent(JSON.stringify(userInfo))}`);
+        const fallbackUrl = `${fastApiUrl}?user=${encodeURIComponent(JSON.stringify(userInfo))}`;
+        return NextResponse.redirect(new URL(fallbackUrl));
       }
     } catch (error) {
       console.error("Error calling FastAPI callback:", error);
       // Fallback: redirect with user info
-      return NextResponse.redirect(`${fastApiUrl}?user=${encodeURIComponent(JSON.stringify(userInfo))}`);
+      const fallbackUrl = `${fastApiUrl}?user=${encodeURIComponent(JSON.stringify(userInfo))}`;
+      return NextResponse.redirect(new URL(fallbackUrl));
     }
   } catch (error) {
     console.error("Error in auth callback:", error);

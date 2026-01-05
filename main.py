@@ -131,7 +131,12 @@ async def root():
     """Serve the frontend"""
     import os
     html_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
-    return FileResponse(html_path)
+    response = FileResponse(html_path)
+    # Add cache control headers to prevent caching of HTML
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Mount static files AFTER the root route
 app.mount("/static", StaticFiles(directory="static"), name="static")

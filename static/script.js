@@ -10,24 +10,49 @@ const AUTH0_NEXTJS_URL = 'http://localhost:3000'; // Update if different
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM Content Loaded');
+    console.log('📍 Current URL:', window.location.href);
+    console.log('📍 Current search params:', window.location.search);
+    
     // Check for Auth0 callback (token, userId, or user info in URL)
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     const userIdParam = urlParams.get('userId');
     const userParam = urlParams.get('user');
     
-    console.log('Page loaded, checking for token, userId, or user in URL...');
+    console.log('🔍 URL Parameters found:');
+    console.log('  - token:', token ? 'YES (length: ' + token.length + ')' : 'NO');
+    console.log('  - userId:', userIdParam || 'NO');
+    console.log('  - user:', userParam ? 'YES' : 'NO');
     
     if (userIdParam) {
-        console.log('UserId found in URL:', userIdParam);
+        console.log('✅✅✅ UserId found in URL:', userIdParam);
+        // Clear redirect flag since we successfully got userId
+        sessionStorage.removeItem('redirectingToAuth');
+        
         // UserId passed directly - user already registered in FastAPI
         userId = parseInt(userIdParam);
+        if (isNaN(userId)) {
+            console.error('❌ Invalid userId:', userIdParam);
+            showLoginModal();
+            return;
+        }
+        console.log('✅ Parsed userId as number:', userId);
         localStorage.setItem('userId', userId.toString());
-        console.log('UserId stored, initializing chat...');
-        // Clean URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        hideLoginModal();
-        enableChat();
+        console.log('✅ UserId stored in localStorage:', userId);
+        
+        // Clean URL immediately to prevent re-reading
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        console.log('✅ URL cleaned, new URL:', cleanUrl);
+        
+        // Small delay to ensure DOM is ready, then enable chat
+        setTimeout(() => {
+            console.log('✅ Hiding login modal and enabling chat...');
+            hideLoginModal();
+            enableChat();
+            console.log('✅✅✅ Chat should be enabled now!');
+        }, 100);
     } else if (token) {
         console.log('Token found in URL, length:', token.length);
         // Token passed from Auth0 callback
@@ -56,10 +81,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check if already logged in
         const storedUserId = localStorage.getItem('userId');
         if (storedUserId) {
-            console.log('UserId found in localStorage:', storedUserId);
+            console.log('✅ UserId found in localStorage:', storedUserId);
             userId = parseInt(storedUserId);
-            hideLoginModal();
-            enableChat();
+            if (isNaN(userId)) {
+                console.error('❌ Invalid userId in localStorage:', storedUserId);
+                localStorage.removeItem('userId');
+                showLoginModal();
+            } else {
+                console.log('✅ Using stored userId:', userId);
+                hideLoginModal();
+                enableChat();
+            }
         } else {
             authToken = localStorage.getItem('authToken');
             if (authToken) {
@@ -104,9 +136,34 @@ function hideLoginModal() {
 }
 
 function handleLogin() {
+    // Prevent multiple clicks/redirects
+    const loginButton = document.getElementById('loginButton');
+    if (loginButton) {
+        loginButton.disabled = true;
+        loginButton.textContent = 'Redirecting...';
+    }
+    
+    // Check if we're already redirecting (prevent loops)
+    const redirecting = sessionStorage.getItem('redirectingToAuth');
+    if (redirecting) {
+        const redirectTime = parseInt(redirecting);
+        const now = Date.now();
+        if (now - redirectTime < 5000) {
+            console.log('⚠️ Already redirecting, ignoring click');
+            return;
+        }
+    }
+    
+    sessionStorage.setItem('redirectingToAuth', Date.now().toString());
+    
     // Redirect to Auth0 login (Next.js app)
-    console.log('Login button clicked, redirecting to:', `${AUTH0_NEXTJS_URL}/auth/login`);
-    window.location.href = `${AUTH0_NEXTJS_URL}/auth/login?returnTo=${encodeURIComponent(window.location.origin)}`;
+    // IMPORTANT: Set returnTo to Next.js auth-callback route, not FastAPI directly
+    // This ensures Next.js handles the auth flow and redirects to FastAPI with userId
+    const returnTo = `${AUTH0_NEXTJS_URL}/api/auth-callback`;
+    console.log('🔐 Login button clicked');
+    console.log('📍 Redirecting to:', `${AUTH0_NEXTJS_URL}/auth/login`);
+    console.log('📍 ReturnTo will be:', returnTo);
+    window.location.href = `${AUTH0_NEXTJS_URL}/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 async function createUserSession(userInfo) {
@@ -224,10 +281,46 @@ async function initializeUser() {
 }
 
 function enableChat() {
-    document.getElementById('chatInputContainer').style.display = 'block';
-    document.getElementById('chatInput').disabled = false;
-    document.getElementById('sendButton').disabled = false;
-    document.getElementById('chatInput').focus();
+    console.log('🔧 enableChat() called, userId:', userId);
+    
+    if (!userId || userId === null || userId === undefined) {
+        console.error('❌ Cannot enable chat: userId is null/undefined');
+        console.error('❌ Current userId value:', userId);
+        showLoginModal();
+        return;
+    }
+    
+    const chatInputContainer = document.getElementById('chatInputContainer');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
+    const loginModal = document.getElementById('loginModal');
+    
+    console.log('🔍 Checking DOM elements...');
+    console.log('  - chatInputContainer:', chatInputContainer ? '✅' : '❌');
+    console.log('  - chatInput:', chatInput ? '✅' : '❌');
+    console.log('  - sendButton:', sendButton ? '✅' : '❌');
+    console.log('  - loginModal:', loginModal ? '✅' : '❌');
+    
+    if (!chatInputContainer || !chatInput || !sendButton) {
+        console.error('❌ Chat elements not found! Cannot enable chat.');
+        return;
+    }
+    
+    // Hide login modal FIRST
+    if (loginModal) {
+        loginModal.style.display = 'none';
+        console.log('✅ Login modal hidden');
+    } else {
+        console.warn('⚠️ Login modal element not found');
+    }
+    
+    // Show chat input
+    chatInputContainer.style.display = 'block';
+    chatInput.disabled = false;
+    sendButton.disabled = false;
+    chatInput.focus();
+    console.log('✅✅✅ Chat enabled successfully! User can now chat.');
+    console.log('✅ userId:', userId);
 }
 
 

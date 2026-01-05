@@ -1,0 +1,25 @@
+# CPU-only version (saves ~3-5GB space, no CUDA)
+# Use this if you don't have NVIDIA GPU or want to save space
+# Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# Then: pip install -r requirements-cpu.txt
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-dotenv==1.0.0
+google-generativeai==0.3.1
+chromadb==0.4.18
+numpy<2.0.0
+PyPDF2==3.0.1
+python-docx==1.1.0
+openpyxl==3.1.2
+sentence-transformers>=2.3.0
+email-validator==2.1.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+PyJWT[cryptography]==2.8.0
+python-multipart==0.0.6
+scikit-learn>=1.0.0
+scipy>=1.5.0
+transformers>=4.21.0
+tokenizers>=0.13.0
+
