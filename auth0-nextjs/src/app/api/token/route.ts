@@ -52,12 +52,13 @@ export async function GET() {
           if (accessToken) {
             tokenToUse = accessToken;
           }
-        } catch (e) {
+        } catch {
           console.log("getAccessToken() without audience failed, trying alternative...");
         }
       }
-    } catch (error: any) {
-      console.error("Error getting access token:", error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("Error getting access token:", errorMessage);
     }
 
     // If still no token, try to get it from the request/response

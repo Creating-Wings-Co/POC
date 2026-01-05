@@ -23,7 +23,7 @@ export default function Home() {
           setTimeout(() => resolve({ error: "timeout" }), 2000);
         })
       ])
-        .then((data: any) => {
+        .then((data: { token?: string; error?: string; user?: unknown; message?: string }) => {
           console.log("Token fetch result:", data);
           if (data.token) {
             console.log("Redirecting to FastAPI with token");
