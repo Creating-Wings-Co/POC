@@ -10,14 +10,25 @@ const AUTH0_NEXTJS_URL = 'http://localhost:3000'; // Update if different
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Check for Auth0 callback (token or user info in URL)
+    // Check for Auth0 callback (token, userId, or user info in URL)
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
+    const userIdParam = urlParams.get('userId');
     const userParam = urlParams.get('user');
     
-    console.log('Page loaded, checking for token or user in URL...');
+    console.log('Page loaded, checking for token, userId, or user in URL...');
     
-    if (token) {
+    if (userIdParam) {
+        console.log('UserId found in URL:', userIdParam);
+        // UserId passed directly - user already registered in FastAPI
+        userId = parseInt(userIdParam);
+        localStorage.setItem('userId', userId.toString());
+        console.log('UserId stored, initializing chat...');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        hideLoginModal();
+        enableChat();
+    } else if (token) {
         console.log('Token found in URL, length:', token.length);
         // Token passed from Auth0 callback
         authToken = decodeURIComponent(token); // Decode in case it was encoded
@@ -41,15 +52,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-        console.log('No token or user in URL, checking localStorage...');
+        console.log('No token, userId, or user in URL, checking localStorage...');
         // Check if already logged in
-        authToken = localStorage.getItem('authToken');
-        if (authToken) {
-            console.log('Token found in localStorage, calling initializeUser...');
-            initializeUser();
+        const storedUserId = localStorage.getItem('userId');
+        if (storedUserId) {
+            console.log('UserId found in localStorage:', storedUserId);
+            userId = parseInt(storedUserId);
+            hideLoginModal();
+            enableChat();
         } else {
-            console.log('No token found, showing login modal');
-            showLoginModal();
+            authToken = localStorage.getItem('authToken');
+            if (authToken) {
+                console.log('Token found in localStorage, calling initializeUser...');
+                initializeUser();
+            } else {
+                console.log('No token or userId found, showing login modal');
+                showLoginModal();
+            }
         }
     }
     
