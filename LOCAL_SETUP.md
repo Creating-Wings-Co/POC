@@ -172,7 +172,7 @@ npm run dev
 2. **Click "Login"** - you'll be redirected to Auth0
 3. **Sign in** with Google (or your Auth0 account)
 4. **You'll be redirected back** to your chatbot
-5. **Start chatting!** 🎉
+5. **Start chatting!** 
 
 ---
 
@@ -306,14 +306,4 @@ curl http://localhost:8000/api/health
 - `NEXT_PUBLIC_FASTAPI_URL` - Required (`http://localhost:8000` for local)
 
 ---
-
-## Next Steps
-
-Once everything is running locally:
-1. ✅ Test the chatbot functionality
-2. ✅ Make code changes and see them hot-reload
-3. ✅ Debug any issues
-4. ✅ When ready, deploy to AWS using the AWS_COMPLETE_GUIDE.md
-
-**Happy coding! 🚀**
 
