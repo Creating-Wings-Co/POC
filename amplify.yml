@@ -1,0 +1,19 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd auth0-nextjs
+        - npm install
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: auth0-nextjs/.next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - auth0-nextjs/node_modules/**/*
+      - auth0-nextjs/.next/cache/**/*
+

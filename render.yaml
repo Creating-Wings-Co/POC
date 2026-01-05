@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: chatbot-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GOOGLE_GEMINI_API_KEY
+        sync: false
+      - key: AUTH0_DOMAIN
+        sync: false
+      - key: AUTH0_AUDIENCE
+        sync: false
+      - key: AUTH0_CLIENT_ID
+        sync: false
+      - key: AUTH0_CLIENT_SECRET
+        sync: false
+      - key: AUTH0_NEXTJS_URL
+        sync: false
+      - key: DATABASE_PATH
+        value: /opt/render/project/src/chatbot.db
+      - key: VECTOR_DB_PATH
+        value: /opt/render/project/src/vector_db
+      - key: KNOWLEDGE_BASE_PATH
+        value: /opt/render/project/src/DATABSE
+      - key: PORT
+        fromService:
+          type: web
+          name: chatbot-backend
+          property: port
+

@@ -13,8 +13,8 @@ class Config:
     # Vector Database
     VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", "./vector_db")
     
-    # Knowledge Base
-    KNOWLEDGE_BASE_PATH = os.getenv("KNOWLEDGE_BASE_PATH", "/Users/samayshetty/CWMVP/DATABSE")
+    # Knowledge Base - use relative path by default, can be overridden via env var
+    KNOWLEDGE_BASE_PATH = os.getenv("KNOWLEDGE_BASE_PATH", os.path.join(os.path.dirname(__file__), "DATABSE"))
     
     # Model Configuration
     GEMINI_MODEL = "gemini-2.5-flash"  # or "gemini-1.5-pro" for better quality
