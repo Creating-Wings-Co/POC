@@ -84,6 +84,19 @@ class Auth0UserInfo(BaseModel):
     name: str
     email: str
     picture: Optional[str] = None
+    # Registration metadata (optional)
+    phone: Optional[str] = None
+    age: Optional[int] = None
+    financial_goals: Optional[str] = None
+    income_range: Optional[str] = None
+    employment_status: Optional[str] = None
+    marital_status: Optional[str] = None
+    dependents: Optional[int] = None
+    investment_experience: Optional[str] = None
+    risk_tolerance: Optional[str] = None
+    education: Optional[str] = None
+    location: Optional[str] = None
+    username: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -142,11 +155,6 @@ async def root():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/api/auth/login")
-async def auth_login():
-    """Redirect to Auth0 login page"""
-    auth0_login_url = f"{Config.AUTH0_NEXTJS_URL}/auth/login"
-    return RedirectResponse(url=auth0_login_url)
 
 
 @app.post("/api/auth/callback")
@@ -176,12 +184,24 @@ async def auth_callback(user_info: Auth0UserInfo, authorization: Optional[str] =
         name = user_info.name
         email = user_info.email
     
-    # Create or update user in database
+    # Create or update user in database with metadata
     user_id = db.create_or_update_user_from_auth0(
         auth0_sub=auth0_sub,
         name=name,
         email=email,
-        picture=user_info.picture
+        picture=user_info.picture,
+        phone=user_info.phone,
+        age=user_info.age,
+        financial_goals=user_info.financial_goals,
+        income_range=user_info.income_range,
+        employment_status=user_info.employment_status,
+        marital_status=user_info.marital_status,
+        dependents=user_info.dependents,
+        investment_experience=user_info.investment_experience,
+        risk_tolerance=user_info.risk_tolerance,
+        education=user_info.education,
+        location=user_info.location,
+        username=user_info.username
     )
     
     if not user_id:
@@ -230,12 +250,30 @@ async def get_current_user_info(user: Dict = Depends(get_user_from_token)):
         if not db_user:
             raise HTTPException(status_code=500, detail="Failed to retrieve created user")
     
-    return UserResponse(
-        user_id=db_user['id'],
-        name=db_user['name'],
-        email=db_user['email'],
-        created_at=db_user['created_at']
-    )
+    # Return full user info including metadata
+    return {
+        "user_id": db_user['id'],
+        "name": db_user['name'],
+        "email": db_user['email'],
+        "picture": None,  # Can be added if stored
+        "created_at": db_user['created_at']
+    }
+
+
+@app.get("/api/user/{user_id}")
+async def get_user_by_id(user_id: int):
+    """Get user info by ID (for chatbot display)"""
+    db_user = db.get_user(user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "user_id": db_user['id'],
+        "name": db_user['name'],
+        "email": db_user['email'],
+        "picture": None,
+        "created_at": db_user['created_at']
+    }
 
 
 @app.post("/api/register", response_model=UserResponse)
@@ -296,6 +334,20 @@ async def chat(
     # Get conversation history
     conversation_history = db.get_conversation(user_id, conversation_id) or []
     
+    # Get user metadata for personalized responses
+    user_metadata = None
+    if db_user:
+        user_metadata = {
+            'age': db_user.get('age'),
+            'income_range': db_user.get('income_range'),
+            'marital_status': db_user.get('marital_status'),
+            'employment_status': db_user.get('employment_status'),
+            'education': db_user.get('education'),
+            'location': db_user.get('location'),
+            'financial_goals': db_user.get('financial_goals'),
+            'risk_tolerance': db_user.get('risk_tolerance'),
+        }
+    
     # Add user message to history
     user_message = {
         "role": "user",
@@ -304,10 +356,11 @@ async def chat(
     }
     conversation_history.append(user_message)
     
-    # Generate response using RAG (non-streaming for backwards compatibility)
+    # Generate response using RAG with user metadata
     rag_response = rag_system.generate_response(
         query=request.message,
-        conversation_history=conversation_history
+        conversation_history=conversation_history,
+        user_metadata=user_metadata
     )
     
     # If web search is needed
@@ -320,7 +373,8 @@ async def chat(
                 query=request.message,
                 conversation_history=conversation_history,
                 use_web_search=True,
-                web_search_results=formatted_results
+                web_search_results=formatted_results,
+                user_metadata=user_metadata
             )
     
     # Handle escalation
@@ -352,6 +406,21 @@ async def generate_streaming_response(user_id: int, conversation_id: str, messag
     # Get conversation history
     conversation_history = db.get_conversation(user_id, conversation_id) or []
     
+    # Get user metadata for personalized responses
+    db_user = db.get_user(user_id)
+    user_metadata = None
+    if db_user:
+        user_metadata = {
+            'age': db_user.get('age'),
+            'income_range': db_user.get('income_range'),
+            'marital_status': db_user.get('marital_status'),
+            'employment_status': db_user.get('employment_status'),
+            'education': db_user.get('education'),
+            'location': db_user.get('location'),
+            'financial_goals': db_user.get('financial_goals'),
+            'risk_tolerance': db_user.get('risk_tolerance'),
+        }
+    
     # Add user message to history
     user_message = {
         "role": "user",
@@ -366,11 +435,12 @@ async def generate_streaming_response(user_id: int, conversation_id: str, messag
     full_response = ""
     escalation_detected = False
     
-    # Generate streaming response
+    # Generate streaming response with user metadata
     try:
         for chunk in rag_system.generate_response_stream(
             query=message,
-            conversation_history=conversation_history
+            conversation_history=conversation_history,
+            user_metadata=user_metadata
         ):
             full_response += chunk
             # Send chunk as JSON
@@ -433,6 +503,10 @@ async def chat_stream(
                 raise HTTPException(status_code=404, detail="User not found")
         except (ValueError, TypeError):
             raise HTTPException(status_code=400, detail="Invalid user_id")
+    
+    # Get user metadata if not already retrieved
+    if not db_user:
+        db_user = db.get_user(user_id)
     
     conversation_id = request.conversation_id or str(uuid.uuid4())
     

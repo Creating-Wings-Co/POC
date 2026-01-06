@@ -46,12 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
         window.history.replaceState({}, document.title, cleanUrl);
         console.log('✅ URL cleaned, new URL:', cleanUrl);
         
-        // Small delay to ensure DOM is ready, then enable chat
+        // Small delay to ensure DOM is ready, then load profile and enable chat
         setTimeout(() => {
-            console.log('✅ Hiding login modal and enabling chat...');
+            console.log('✅ Loading user profile and enabling chat...');
             hideLoginModal();
-            enableChat();
-            console.log('✅✅✅ Chat should be enabled now!');
+            loadUserProfile(userId);
+            console.log('✅✅✅ Profile loading initiated!');
         }, 100);
     } else if (token) {
         console.log('Token found in URL, length:', token.length);
@@ -88,9 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('userId');
                 showLoginModal();
             } else {
-                console.log('✅ Using stored userId:', userId);
                 hideLoginModal();
-                enableChat();
+                loadUserProfile(userId);
             }
         } else {
             authToken = localStorage.getItem('authToken');
@@ -140,7 +139,7 @@ function handleLogin() {
     const loginButton = document.getElementById('loginButton');
     if (loginButton) {
         loginButton.disabled = true;
-        loginButton.textContent = 'Redirecting...';
+        loginButton.textContent = 'Signing in...';
     }
     
     // Check if we're already redirecting (prevent loops)
@@ -195,12 +194,12 @@ async function createUserSession(userInfo) {
         userId = userData.user_id;
         localStorage.setItem('userId', userId);
         
-        // For now, we'll use a mock token or skip token verification
-        // In production, you'd want proper token handling
         hideLoginModal();
+        displayUserProfile(userData);
         enableChat();
         
-        addMessage('assistant', `Welcome, ${userData.name}. How can I help you today?`);
+        // Update welcome message with personalized greeting
+        updateWelcomeMessage(userData.name);
     } catch (error) {
         console.error('Error creating user session:', error);
         showLoginModal();
@@ -269,9 +268,11 @@ async function initializeUser() {
         localStorage.setItem('userId', userId);
         
         hideLoginModal();
+        displayUserProfile(userData);
         enableChat();
         
-        addMessage('assistant', `Welcome back, ${userData.name}. How can I help you today?`);
+        // Update welcome message with personalized greeting
+        updateWelcomeMessage(userData.name);
     } catch (error) {
         console.error('Error initializing user:', error);
         localStorage.removeItem('authToken');
@@ -280,12 +281,84 @@ async function initializeUser() {
     }
 }
 
-function enableChat() {
-    console.log('🔧 enableChat() called, userId:', userId);
+async function loadUserProfile(userId) {
+    console.log('📥 Loading user profile for userId:', userId);
+    try {
+        const response = await fetch(`${API_BASE}/api/user/${userId}`);
+        console.log('📡 API response status:', response.status);
+        if (response.ok) {
+            const userData = await response.json();
+            console.log('✅ User data received:', userData);
+            displayUserProfile(userData);
+            updateWelcomeMessage(userData.name);
+            enableChat();
+        } else {
+            const errorText = await response.text();
+            console.error('❌ Failed to load user profile:', response.status, errorText);
+            showLoginModal();
+        }
+    } catch (error) {
+        console.error('❌ Error loading user profile:', error);
+        showLoginModal();
+    }
+}
+
+function displayUserProfile(userData) {
+    console.log('🎨 Displaying user profile:', userData);
+    const userProfile = document.getElementById('userProfile');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+    const userInitials = document.getElementById('userInitials');
     
+    if (!userProfile) {
+        console.error('❌ userProfile element not found');
+        return;
+    }
+    if (!userName) {
+        console.error('❌ userName element not found');
+        return;
+    }
+    if (!userEmail) {
+        console.error('❌ userEmail element not found');
+        return;
+    }
+    if (!userInitials) {
+        console.error('❌ userInitials element not found');
+        return;
+    }
+    
+    userName.textContent = userData.name || 'User';
+    userEmail.textContent = userData.email || '';
+    
+    // Generate initials from name
+    const initials = (userData.name || 'U')
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+    userInitials.textContent = initials;
+    
+    // Use class instead of inline style for better CSS control
+    userProfile.style.display = 'flex';
+    userProfile.classList.add('show');
+    console.log('✅ User profile displayed');
+}
+
+function updateWelcomeMessage(userName) {
+    console.log('💬 Updating welcome message for:', userName);
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    if (welcomeMessage) {
+        const name = userName || 'there';
+        welcomeMessage.innerHTML = `<p>Hi ${name}! How can I help you today?</p>`;
+        console.log('✅ Welcome message updated');
+    } else {
+        console.error('❌ welcomeMessage element not found');
+    }
+}
+
+function enableChat() {
     if (!userId || userId === null || userId === undefined) {
-        console.error('❌ Cannot enable chat: userId is null/undefined');
-        console.error('❌ Current userId value:', userId);
         showLoginModal();
         return;
     }
@@ -295,32 +368,18 @@ function enableChat() {
     const sendButton = document.getElementById('sendButton');
     const loginModal = document.getElementById('loginModal');
     
-    console.log('🔍 Checking DOM elements...');
-    console.log('  - chatInputContainer:', chatInputContainer ? '✅' : '❌');
-    console.log('  - chatInput:', chatInput ? '✅' : '❌');
-    console.log('  - sendButton:', sendButton ? '✅' : '❌');
-    console.log('  - loginModal:', loginModal ? '✅' : '❌');
-    
     if (!chatInputContainer || !chatInput || !sendButton) {
-        console.error('❌ Chat elements not found! Cannot enable chat.');
         return;
     }
     
-    // Hide login modal FIRST
     if (loginModal) {
         loginModal.style.display = 'none';
-        console.log('✅ Login modal hidden');
-    } else {
-        console.warn('⚠️ Login modal element not found');
     }
     
-    // Show chat input
     chatInputContainer.style.display = 'block';
     chatInput.disabled = false;
     sendButton.disabled = false;
     chatInput.focus();
-    console.log('✅✅✅ Chat enabled successfully! User can now chat.');
-    console.log('✅ userId:', userId);
 }
 
 

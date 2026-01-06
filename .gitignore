@@ -32,3 +32,19 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Documentation and non-code files
+*.md
+!README.md
+guide.txt
+db_queries.sql
+*.txt
+!requirements.txt
+!requirements-cpu.txt
+
+# AWS/Documentation
+AWS_*.md
+DEPLOYMENT.md
+INSTALL_GUIDE.md
+LOCAL_SETUP.md
+*.code-workspace
+

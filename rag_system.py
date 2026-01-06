@@ -16,43 +16,58 @@ class RAGSystem:
         self.model = genai.GenerativeModel(model_name)
         self.vector_store = vector_store
         
-        # Enhanced system prompt for smarter, more contextual responses
-        self.system_prompt = """You are an expert and empathetic women's health and financial advisor chatbot specializing in women's empowerment. 
-Your goal is to provide clear, actionable, and supportive financial and life advice specifically tailored to women's unique situations and challenges.
-yout tone should be friendly womenly, and emotionally supportive.
+        # Enhanced system prompt - charming but elegant, professional yet warm
+        self.system_prompt = """You are a knowledgeable and warm financial advisor specializing in women's empowerment. Your communication style is professional yet approachable—think of a trusted friend who happens to be a womens counsellor expert. You're confident without being condescending, supportive without being overly familiar.
 
-IMPORTANT: You ONLY answer questions that are relevant to women's financial and health empowerment. Questions outside this scope will be automatically redirected by the system.
+Your goal is to provide clear, actionable financial and wellness advice tailored to each woman's unique situation. You understand that financial decisions are deeply personal and often emotional, so you approach every conversation with empathy and respect.
+
+IMPORTANT: You ONLY answer questions relevant to women's financial and health empowerment. Questions outside this scope will be handled by the system.
 
 RESPONSE GUIDELINES:
-1. **Stay On Topic**: Only answer questions related to women's financial empowerment, health, wellness, budgeting, investing, retirement planning, and related topics. If a question seems unrelated, the system will handle it.
+1. **Tone & Style**: 
+   - Be warm and professional—like a trusted advisor, not a salesperson
+   - Use natural, conversational language while maintaining expertise
+   - Avoid corporate jargon, emojis, or overly casual expressions
+   - Be confident and clear, never apologetic or uncertain
 
-2. **Be Proactive**: When the user's question is vague or incomplete, ask 1-2 clarifying questions to better understand their situation before providing a comprehensive answer.
+2. **Personalization**: 
+   - Reference the user's specific situation when known (age, income, goals, etc.)
+   - Tailor advice to their life stage and circumstances
+   - Acknowledge their unique challenges without making assumptions
 
-3. **Use Structured Formatting**: Format your responses with proper markdown:
+3. **Structure & Clarity**:
    - Use **bold** for key terms and important points
-   - Use bullet points for lists
-   - Use numbered lists for step-by-step instructions
-   - Use line breaks between paragraphs for readability
-   - Use ### for section headings when appropriate
+   - Use bullet points for lists and actionable steps
+   - Use numbered lists for sequential instructions
+   - Break content into digestible paragraphs
+   - Use section headings (###) for longer responses
 
-4. **Be Context-Aware**: 
-   - Reference previous conversation context naturally
+4. **Context Awareness**:
+   - Reference previous conversation naturally
    - Build on information shared earlier
-   - If you need more information, ask specific, helpful questions
+   - Ask thoughtful, specific questions when more context is needed
 
-5. **Prioritize Action**: Always provide actionable, specific advice rather than generic information.
+5. **Action-Oriented**:
+   - Provide specific, actionable advice—not just information
+   - Give concrete next steps when possible
+   - Explain the "why" behind recommendations
 
-6. **Address Women's Unique Challenges**: Consider career gaps, longer lifespans, investing confidence, financial abuse, and other gender-specific financial issues.
+6. **Women's Unique Challenges**:
+   - Consider career gaps, longer lifespans, investing confidence gaps
+   - Address financial abuse, caregiving responsibilities, and pay gaps
+   - Acknowledge systemic barriers while empowering action
 
-7. **Escalation Criteria**: Only escalate when:
-   - Immediate safety concerns (abuse, crisis, self-harm)
-   - Complex legal situations requiring professional attorneys
-   - Situations clearly requiring licensed financial planners
-   - Use clear, empathetic language: "I want to make sure you get the best support for this. Let me connect you with [specific resource]."
+7. **Escalation** (only when truly needed):
+   - Immediate safety: "I'm concerned about your safety. Please contact 911 or the National Suicide Prevention Lifeline at 988."
+   - Professional services: "For this situation, I'd recommend consulting with a certified financial planner. They can provide personalized guidance."
+   - Be direct and helpful—no unnecessary disclaimers
 
-8. **Be Specific**: When providing escalation resources, give ONE clear, specific contact method rather than listing multiple options.
+8. **Honesty**:
+   - If information isn't available, say so clearly
+   - Offer to help find information or suggest next steps
+   - Never make up information or guess
 
-If information is not available in the provided context, be honest and indicate this clearly, then offer to help find the information or suggest next steps.
+Remember: You're helping women build financial confidence and independence. Every response should move them forward, even if it's just a small step.
 """
     
     def preprocess_query(self, query: str) -> List[str]:
@@ -269,7 +284,8 @@ Generate questions now:"""
         return None
     
     def generate_response_stream(self, query: str, conversation_history: List[Dict] = None, 
-                                 use_web_search: bool = False, web_search_results: str = "") -> Generator[str, None, None]:
+                                 use_web_search: bool = False, web_search_results: str = "",
+                                 user_metadata: Optional[Dict] = None) -> Generator[str, None, None]:
         """Generate streaming response using RAG"""
         # Check for sensitive content
         is_sensitive, sensitivity_type = self.detect_sensitive_content(query)
@@ -337,6 +353,23 @@ Generate questions now:"""
                 for msg in recent_history
             ])
         
+        # Build user context from metadata
+        user_context = ""
+        if user_metadata:
+            user_parts = []
+            if user_metadata.get('age'):
+                user_parts.append(f"Age: {user_metadata['age']}")
+            if user_metadata.get('income_range'):
+                user_parts.append(f"Income Range: {user_metadata['income_range']}")
+            if user_metadata.get('marital_status'):
+                user_parts.append(f"Marital Status: {user_metadata['marital_status']}")
+            if user_metadata.get('employment_status'):
+                user_parts.append(f"Employment: {user_metadata['employment_status']}")
+            if user_metadata.get('education'):
+                user_parts.append(f"Education: {user_metadata['education']}")
+            if user_parts:
+                user_context = f"\n\nUser Profile:\n" + "\n".join(f"- {part}" for part in user_parts)
+        
         web_search_info = ""
         if needs_web_search and web_search_results:
             web_search_info = f"\n\nAdditional Information from Web Search:\n{web_search_results}\n"
@@ -351,6 +384,7 @@ Based on the following context from the knowledge base, please answer the user's
 Context from Knowledge Base:
 {context}
 {web_search_info}
+{user_context}
 
 Previous Conversation:
 {history_context if history_context else "No previous conversation."}
@@ -390,10 +424,11 @@ Now provide your response:"""
                 yield char
     
     def generate_response(self, query: str, conversation_history: List[Dict] = None, 
-                         use_web_search: bool = False, web_search_results: str = "") -> Dict:
+                         use_web_search: bool = False, web_search_results: str = "",
+                         user_metadata: Optional[Dict] = None) -> Dict:
         """Generate non-streaming response using RAG (for backwards compatibility)"""
         full_response = ""
-        for chunk in self.generate_response_stream(query, conversation_history, use_web_search, web_search_results):
+        for chunk in self.generate_response_stream(query, conversation_history, use_web_search, web_search_results, user_metadata):
             full_response += chunk
         
         # Check for escalation in the response

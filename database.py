@@ -27,7 +27,7 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Users table - ADD auth0_sub field
+        # Users table - ADD auth0_sub field and metadata fields
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,22 +35,57 @@ class Database:
                 name TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 phone TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                age INTEGER,
+                financial_goals TEXT,
+                income_range TEXT,
+                employment_status TEXT,
+                marital_status TEXT,
+                dependents INTEGER,
+                investment_experience TEXT,
+                risk_tolerance TEXT,
+                education TEXT,
+                location TEXT,
+                username TEXT,
+                metadata TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         
-        # Add auth0_sub column if it doesn't exist (for existing databases)
-        # SQLite doesn't allow adding UNIQUE columns, so add column first, then index
+        # Add new columns if they don't exist (for existing databases)
+        new_columns = [
+            ("auth0_sub", "TEXT"),
+            ("age", "INTEGER"),
+            ("financial_goals", "TEXT"),
+            ("income_range", "TEXT"),
+            ("employment_status", "TEXT"),
+            ("marital_status", "TEXT"),
+            ("dependents", "INTEGER"),
+            ("investment_experience", "TEXT"),
+            ("risk_tolerance", "TEXT"),
+            ("education", "TEXT"),
+            ("location", "TEXT"),
+            ("username", "TEXT"),
+            ("metadata", "TEXT"),
+            ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        ]
+        
+        for column_name, column_type in new_columns:
+            try:
+                cursor.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
+                conn.commit()
+            except sqlite3.OperationalError as e:
+                if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                    pass  # Column already exists
+                else:
+                    logger.warning(f"Could not add {column_name} column: {e}")
+        
+        # Create unique index for auth0_sub
         try:
-            cursor.execute("ALTER TABLE users ADD COLUMN auth0_sub TEXT")
-            # Create unique index separately
             cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_auth0_sub ON users(auth0_sub)")
             conn.commit()
-        except sqlite3.OperationalError as e:
-            if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
-                pass  # Column already exists
-            else:
-                logger.warning(f"Could not add auth0_sub column: {e}")
+        except sqlite3.OperationalError:
+            pass  # Index might already exist
         
         # Conversations table (temporary storage - auto cleanup old ones)
         cursor.execute("""
@@ -200,9 +235,21 @@ class Database:
         auth0_sub: str, 
         name: str, 
         email: str, 
-        picture: Optional[str] = None
+        picture: Optional[str] = None,
+        phone: Optional[str] = None,
+        age: Optional[int] = None,
+        financial_goals: Optional[str] = None,
+        income_range: Optional[str] = None,
+        employment_status: Optional[str] = None,
+        marital_status: Optional[str] = None,
+        dependents: Optional[int] = None,
+        investment_experience: Optional[str] = None,
+        risk_tolerance: Optional[str] = None,
+        education: Optional[str] = None,
+        location: Optional[str] = None,
+        username: Optional[str] = None
     ) -> Optional[int]:
-        """Create or update user from Auth0 info"""
+        """Create or update user from Auth0 info with metadata"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -212,11 +259,18 @@ class Database:
             existing = cursor.fetchone()
             
             if existing:
-                # Update existing user
+                # Update existing user with all metadata
                 user_id = existing['id']
                 cursor.execute(
-                    "UPDATE users SET name = ?, email = ? WHERE auth0_sub = ?",
-                    (name, email, auth0_sub)
+                    """UPDATE users SET name = ?, email = ?, phone = ?, age = ?, 
+                       financial_goals = ?, income_range = ?, employment_status = ?, 
+                       marital_status = ?, dependents = ?, investment_experience = ?, 
+                       risk_tolerance = ?, education = ?, location = ?, username = ?,
+                       updated_at = CURRENT_TIMESTAMP 
+                       WHERE auth0_sub = ?""",
+                    (name, email, phone, age, financial_goals, income_range,
+                     employment_status, marital_status, dependents, investment_experience,
+                     risk_tolerance, education, location, username, auth0_sub)
                 )
             else:
                 # Check if user exists by email (for migration)
@@ -224,17 +278,30 @@ class Database:
                 email_existing = cursor.fetchone()
                 
                 if email_existing:
-                    # Update existing user with auth0_sub
+                    # Update existing user with auth0_sub and metadata
                     user_id = email_existing['id']
                     cursor.execute(
-                        "UPDATE users SET auth0_sub = ?, name = ? WHERE email = ?",
-                        (auth0_sub, name, email)
+                        """UPDATE users SET auth0_sub = ?, name = ?, phone = ?, age = ?, 
+                           financial_goals = ?, income_range = ?, employment_status = ?, 
+                           marital_status = ?, dependents = ?, investment_experience = ?, 
+                           risk_tolerance = ?, education = ?, location = ?, username = ?,
+                           updated_at = CURRENT_TIMESTAMP 
+                           WHERE email = ?""",
+                        (auth0_sub, name, phone, age, financial_goals, income_range,
+                         employment_status, marital_status, dependents, investment_experience,
+                         risk_tolerance, education, location, username, email)
                     )
                 else:
-                    # Create new user
+                    # Create new user with all metadata
                     cursor.execute(
-                        "INSERT INTO users (auth0_sub, name, email) VALUES (?, ?, ?)",
-                        (auth0_sub, name, email)
+                        """INSERT INTO users (auth0_sub, name, email, phone, age, 
+                           financial_goals, income_range, employment_status, 
+                           marital_status, dependents, investment_experience, risk_tolerance,
+                           education, location, username) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (auth0_sub, name, email, phone, age, financial_goals, income_range,
+                         employment_status, marital_status, dependents, investment_experience,
+                         risk_tolerance, education, location, username)
                     )
                     user_id = cursor.lastrowid
             
@@ -260,3 +327,66 @@ class Database:
         except Exception as e:
             logger.error(f"Error getting user by auth0_sub: {e}")
             return None
+    
+    def update_user_metadata(
+        self,
+        user_id: int,
+        age: Optional[int] = None,
+        financial_goals: Optional[str] = None,
+        income_range: Optional[str] = None,
+        employment_status: Optional[str] = None,
+        marital_status: Optional[str] = None,
+        dependents: Optional[int] = None,
+        investment_experience: Optional[str] = None,
+        risk_tolerance: Optional[str] = None,
+        metadata: Optional[str] = None
+    ) -> bool:
+        """Update user metadata"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            updates = []
+            values = []
+            
+            if age is not None:
+                updates.append("age = ?")
+                values.append(age)
+            if financial_goals is not None:
+                updates.append("financial_goals = ?")
+                values.append(financial_goals)
+            if income_range is not None:
+                updates.append("income_range = ?")
+                values.append(income_range)
+            if employment_status is not None:
+                updates.append("employment_status = ?")
+                values.append(employment_status)
+            if marital_status is not None:
+                updates.append("marital_status = ?")
+                values.append(marital_status)
+            if dependents is not None:
+                updates.append("dependents = ?")
+                values.append(dependents)
+            if investment_experience is not None:
+                updates.append("investment_experience = ?")
+                values.append(investment_experience)
+            if risk_tolerance is not None:
+                updates.append("risk_tolerance = ?")
+                values.append(risk_tolerance)
+            if metadata is not None:
+                updates.append("metadata = ?")
+                values.append(metadata)
+            
+            if updates:
+                updates.append("updated_at = CURRENT_TIMESTAMP")
+                values.append(user_id)
+                
+                query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, values)
+                conn.commit()
+            
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating user metadata: {e}")
+            return False
