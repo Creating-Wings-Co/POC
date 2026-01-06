@@ -9,7 +9,7 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: auth0-nextjs/.next
+    baseDirectory: auth0-nextjs/.next/standalone
     files:
       - '**/*'
   cache:

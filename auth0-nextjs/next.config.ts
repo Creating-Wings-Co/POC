@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Ensure proper routing for Amplify
+  trailingSlash: false,
 };
 
 export default nextConfig;
