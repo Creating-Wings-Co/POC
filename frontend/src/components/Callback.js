@@ -107,6 +107,9 @@ function Callback() {
         }
 
         // Call FastAPI /api/auth/callback to register/update user
+        console.log("Calling FastAPI:", `${FASTAPI_URL}/api/auth/callback`);
+        console.log("User info:", userInfo);
+        
         const callbackResponse = await fetch(`${FASTAPI_URL}/api/auth/callback`, {
           method: "POST",
           headers: {
@@ -114,10 +117,14 @@ function Callback() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(userInfo),
+          mode: 'cors', // Explicitly enable CORS
         });
+
+        console.log("FastAPI response status:", callbackResponse.status);
 
         if (callbackResponse.ok) {
           const userData = await callbackResponse.json();
+          console.log("User registered successfully:", userData);
 
           // Clear registration data from sessionStorage
           sessionStorage.removeItem("registrationData");
@@ -126,18 +133,23 @@ function Callback() {
           if (userData.user_id) {
             // Redirect to FastAPI with user_id
             const redirectUrl = `${FASTAPI_URL}?userId=${userData.user_id}`;
+            console.log("Redirecting to:", redirectUrl);
             window.location.href = redirectUrl;
           } else {
+            console.log("No user_id, redirecting to:", FASTAPI_URL);
             window.location.href = FASTAPI_URL;
           }
         } else {
           const errorText = await callbackResponse.text();
           console.error("Failed to register user. Status:", callbackResponse.status, "Error:", errorText);
+          alert(`Registration failed: ${errorText}. Redirecting to backend...`);
           window.location.href = FASTAPI_URL;
         }
       } catch (error) {
         console.error("Error in auth callback:", error);
-        navigate("/login");
+        alert(`Error: ${error.message}. Check console for details.`);
+        // Still try to redirect to backend
+        window.location.href = FASTAPI_URL;
       }
     }
 

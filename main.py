@@ -28,13 +28,14 @@ except ValueError as e:
 # Initialize FastAPI app
 app = FastAPI(title="Women's Finance Chatbot", version="1.0.0")
 
-# CORS middleware
+# CORS middleware - Allow all origins for Amplify deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # In production, specify exact Amplify URL
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Initialize services
