@@ -156,6 +156,12 @@ async def root():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for ALB"""
+    return {"status": "healthy", "service": "chatbot-api"}
+
+
 
 
 @app.post("/api/auth/callback")
