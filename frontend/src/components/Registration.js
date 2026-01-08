@@ -5,7 +5,7 @@ import { validateTerms } from "../utils/validators";
 
 import "./dummy2_register.css";
 
-import termsText from "../assets/terms.txt";
+// Terms text will be fetched from public folder
 
 class Registration extends Component {
   constructor(props) {
@@ -88,9 +88,15 @@ handleRegister = async (e) => {
 
 
   componentDidMount() {
-    fetch(termsText)
+    // Fetch terms from public folder
+    fetch('/terms.txt')
       .then((res) => res.text())
-      .then((text) => this.setState({ termsContent: text }));
+      .then((text) => this.setState({ termsContent: text }))
+      .catch((error) => {
+        console.error('Error loading terms:', error);
+        // Set default terms if file not found
+        this.setState({ termsContent: 'Terms and Conditions: By using this service, you agree to our terms.' });
+      });
   }
 
   openTerms = () => {
