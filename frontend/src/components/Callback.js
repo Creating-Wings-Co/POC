@@ -242,10 +242,6 @@ function Callback() {
       console.log(storedLogs);
     }
   }, []);
-    }
-
-    handleCallback();
-  }, [user, isAuthenticated, isLoading, getAccessTokenSilently, navigate]);
 
   return (
     <div className="login-container">
