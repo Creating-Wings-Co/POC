@@ -214,7 +214,10 @@ function Callback() {
             logToStorage("🔄 Redirecting to backend", { url: redirectUrl, userId: userData.user_id });
             console.log("🔄 Redirecting to backend with userId:", userData.user_id);
             console.log("🔄 Redirect URL:", redirectUrl);
-            window.location.href = redirectUrl;
+            // Store userId in sessionStorage as backup (in case URL param is lost)
+            sessionStorage.setItem('auth_userId', userData.user_id.toString());
+            // Use replace to avoid back button issues
+            window.location.replace(redirectUrl);
           } else {
             console.error("❌ No user_id received from backend!");
             console.error("❌ Response data:", userData);
