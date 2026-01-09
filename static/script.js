@@ -383,21 +383,17 @@ function updateWelcomeMessage(userName) {
 
 function enableChat() {
     if (!userId || userId === null || userId === undefined) {
-        showLoginModal();
+        // No userId - redirect to frontend for authentication
+        redirectToFrontend();
         return;
     }
     
     const chatInputContainer = document.getElementById('chatInputContainer');
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
-    const loginModal = document.getElementById('loginModal');
     
     if (!chatInputContainer || !chatInput || !sendButton) {
         return;
-    }
-    
-    if (loginModal) {
-        loginModal.style.display = 'none';
     }
     
     chatInputContainer.style.display = 'block';
