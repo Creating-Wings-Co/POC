@@ -162,6 +162,63 @@ async def health_check():
     return {"status": "healthy", "service": "chatbot-api"}
 
 
+@app.get("/api/auth/callback")
+async def auth_callback_get(
+    sub: Optional[str] = None,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    picture: Optional[str] = None,
+    phone: Optional[str] = None,
+    age: Optional[str] = None,
+    financial_goals: Optional[str] = None,
+    income_range: Optional[str] = None,
+    employment_status: Optional[str] = None,
+    marital_status: Optional[str] = None,
+    dependents: Optional[str] = None,
+    investment_experience: Optional[str] = None,
+    risk_tolerance: Optional[str] = None,
+    education: Optional[str] = None,
+    location: Optional[str] = None,
+    username: Optional[str] = None,
+    isRegistration: Optional[str] = None
+):
+    """
+    Handle Auth0 callback via GET (workaround for HTTPS → HTTP mixed content)
+    Redirects to chatbot with userId after saving user
+    """
+    if not sub or not name or not email:
+        raise HTTPException(status_code=400, detail="Missing required user information")
+    
+    # Convert string params to proper types
+    age_int = int(age) if age and age.isdigit() else None
+    dependents_int = int(dependents) if dependents and dependents.isdigit() else None
+    
+    # Create or update user
+    logger.info(f"Creating/updating user via GET - sub: {sub}, name: {name}, email: {email}")
+    user_id = db.create_or_update_user_from_auth0(
+        auth0_sub=sub,
+        name=name,
+        email=email,
+        picture=picture,
+        phone=phone if phone else None,
+        age=age_int,
+        financial_goals=financial_goals if financial_goals else None,
+        income_range=income_range if income_range else None,
+        employment_status=employment_status if employment_status else None,
+        marital_status=marital_status if marital_status else None,
+        dependents=dependents_int,
+        investment_experience=investment_experience if investment_experience else None,
+        risk_tolerance=risk_tolerance if risk_tolerance else None,
+        education=education if education else None,
+        location=location if location else None,
+        username=username if username else None
+    )
+    
+    if not user_id:
+        raise HTTPException(status_code=500, detail="Failed to create/update user")
+    
+    # Redirect to chatbot with userId
+    return RedirectResponse(url=f"/?userId={user_id}", status_code=302)
 
 
 @app.post("/api/auth/callback")
