@@ -139,34 +139,10 @@ function redirectToFrontend() {
 }
 
 function handleLogin() {
-    // Prevent multiple clicks/redirects
-    const loginButton = document.getElementById('loginButton');
-    if (loginButton) {
-        loginButton.disabled = true;
-        loginButton.textContent = 'Signing in...';
-    }
-    
-    // Check if we're already redirecting (prevent loops)
-    const redirecting = sessionStorage.getItem('redirectingToAuth');
-    if (redirecting) {
-        const redirectTime = parseInt(redirecting);
-        const now = Date.now();
-        if (now - redirectTime < 5000) {
-            console.log('⚠️ Already redirecting, ignoring click');
-            return;
-        }
-    }
-    
-    sessionStorage.setItem('redirectingToAuth', Date.now().toString());
-    
-    // Redirect to Auth0 login (Next.js app)
-    // IMPORTANT: Set returnTo to Next.js auth-callback route, not FastAPI directly
-    // This ensures Next.js handles the auth flow and redirects to FastAPI with userId
-    const returnTo = `${AUTH0_NEXTJS_URL}/api/auth-callback`;
-    console.log('🔐 Login button clicked');
-    console.log('📍 Redirecting to:', `${AUTH0_NEXTJS_URL}/auth/login`);
-    console.log('📍 ReturnTo will be:', returnTo);
-    window.location.href = `${AUTH0_NEXTJS_URL}/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+    // No login needed - backend is standalone
+    // Create anonymous session instead
+    console.log('🔐 Creating anonymous session for direct access');
+    createAnonymousSession();
 }
 
 async function createAnonymousSession() {
