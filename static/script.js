@@ -82,7 +82,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-        console.log('No token, userId, or user in URL, checking localStorage...');
+        console.log('No token, userId, or user in URL, checking localStorage and sessionStorage...');
+        // Check sessionStorage first (from frontend redirect)
+        const sessionUserId = sessionStorage.getItem('auth_userId');
+        if (sessionUserId) {
+            console.log('✅ UserId found in sessionStorage:', sessionUserId);
+            userId = parseInt(sessionUserId);
+            sessionStorage.removeItem('auth_userId'); // Clean up
+            if (!isNaN(userId)) {
+                localStorage.setItem('userId', userId.toString());
+                loadUserProfile(userId);
+                return;
+            }
+        }
+        
         // Check if already logged in
         const storedUserId = localStorage.getItem('userId');
         if (storedUserId) {
@@ -91,8 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(userId)) {
                 console.error('❌ Invalid userId in localStorage:', storedUserId);
                 localStorage.removeItem('userId');
-                // Redirect to frontend for authentication
-                console.log('❌ Invalid userId - redirecting to frontend');
                 redirectToFrontend();
             } else {
                 // User is authenticated - load profile and enable chat

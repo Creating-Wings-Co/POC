@@ -11,39 +11,72 @@ function Callback() {
     let isProcessing = false;
     
     async function handleCallback() {
+      console.log("🔍 CALLBACK EFFECT TRIGGERED");
+      console.log("📊 Current state:", {
+        isLoading,
+        isAuthenticated,
+        hasUser: !!user,
+        userEmail: user?.email,
+        url: window.location.href,
+        searchParams: window.location.search
+      });
+      
       // Prevent multiple executions
       if (isProcessing) {
-        console.log("⏳ Already processing callback...");
+        console.log("⏳ Already processing callback - skipping");
         return;
       }
       
       // Wait for Auth0 to finish loading
       if (isLoading) {
-        console.log("⏳ Auth0 still loading...");
+        console.log("⏳ Auth0 still loading - waiting...");
         return;
       }
 
       isProcessing = true;
-      console.log("🔄 Processing callback...", { isAuthenticated, isLoading, hasUser: !!user });
+      console.log("🔄 Starting callback processing...");
 
       // Check authentication - Auth0 should be ready now
       if (!isAuthenticated || !user) {
-        console.error("❌ Not authenticated after callback");
-        console.error("Auth0 state:", { isAuthenticated, isLoading, hasUser: !!user });
-        console.error("This usually means Auth0 callback failed or user cancelled");
+        console.error("❌ NOT AUTHENTICATED");
+        console.error("📊 Auth0 state:", { 
+          isAuthenticated, 
+          isLoading, 
+          hasUser: !!user,
+          user: user,
+          url: window.location.href
+        });
+        console.error("💡 Possible causes:");
+        console.error("   - Auth0 callback failed");
+        console.error("   - User cancelled authentication");
+        console.error("   - Auth0 session expired");
+        console.error("   - Callback URL mismatch");
         isProcessing = false;
         // Use window.location instead of navigate to prevent React Router loops
+        console.log("🔄 Redirecting to /login");
         window.location.href = "/login";
         return;
       }
 
-      console.log("✅ User authenticated:", user.email);
+      console.log("✅ USER AUTHENTICATED SUCCESSFULLY");
+      console.log("👤 User info:", {
+        email: user.email,
+        name: user.name,
+        sub: user.sub,
+        picture: user.picture
+      });
 
       try {
 
         // Read registration data from sessionStorage if available
+        console.log("📦 Reading registration data from sessionStorage...");
         const registrationDataStr = sessionStorage.getItem("registrationData");
         const isRegistration = sessionStorage.getItem("isRegistration") === "true";
+        console.log("📦 Registration data:", {
+          hasData: !!registrationDataStr,
+          isRegistration,
+          data: registrationDataStr ? "present" : "none"
+        });
         let registrationData = null;
 
         if (registrationDataStr) {
@@ -128,14 +161,28 @@ function Callback() {
         }
 
         // Call FastAPI /api/auth/callback to register/update user
-        if (!FASTAPI_URL || FASTAPI_URL.includes('localhost')) {
+        if (!FASTAPI_URL || FASTAPI_URL.includes('localhost') || FASTAPI_URL === '') {
           console.error("❌ FASTAPI_URL is not set or is localhost!");
-          console.error("⚠️ Set REACT_APP_FASTAPI_URL in Amplify environment variables");
-          alert("Configuration error: Backend URL not set. Please contact support.");
+          console.error("⚠️ Current FASTAPI_URL:", FASTAPI_URL);
+          console.error("⚠️ Set REACT_APP_FASTAPI_URL in Vercel environment variables");
+          console.error("⚠️ Go to Vercel Dashboard → Your Project → Settings → Environment Variables");
+          console.error("⚠️ Add: REACT_APP_FASTAPI_URL = http://your-alb-dns-name.us-east-2.elb.amazonaws.com");
+          alert(`Configuration error: Backend URL not set.\n\nCurrent value: ${FASTAPI_URL || 'EMPTY'}\n\nPlease set REACT_APP_FASTAPI_URL in Vercel environment variables.\n\nThen redeploy your app.`);
           return;
         }
-        console.log("Calling FastAPI:", `${FASTAPI_URL}/api/auth/callback`);
-        console.log("User info:", userInfo);
+        
+        console.log("✅ FASTAPI_URL is set:", FASTAPI_URL);
+        logToStorage("📞 Calling FastAPI", { url: `${FASTAPI_URL}/api/auth/callback` });
+        logToStorage("📤 User info being sent", userInfo);
+        
+        // Check for mixed content (HTTPS → HTTP)
+        if (window.location.protocol === 'https:' && FASTAPI_URL.startsWith('http://')) {
+          console.error("❌ MIXED CONTENT BLOCKED: HTTPS frontend cannot call HTTP backend");
+          console.error("⚠️ Browser will block this request");
+          console.error("⚠️ Solution: Set up HTTPS on your ALB");
+          alert("Error: Cannot connect to backend. Your frontend is HTTPS but backend is HTTP.\n\nPlease set up HTTPS on your ALB or contact support.");
+          return;
+        }
         
         const callbackResponse = await fetch(`${FASTAPI_URL}/api/auth/callback`, {
           method: "POST",
@@ -144,14 +191,18 @@ function Callback() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(userInfo),
-          mode: 'cors', // Explicitly enable CORS
+          mode: 'cors',
+        }).catch(error => {
+          console.error("❌ Fetch error (likely mixed content):", error);
+          alert(`Connection error: ${error.message}\n\nThis is likely because your frontend (HTTPS) cannot connect to backend (HTTP).\n\nPlease set up HTTPS on your ALB.`);
+          throw error;
         });
 
-        console.log("FastAPI response status:", callbackResponse.status);
+        logToStorage("📥 FastAPI response status", { status: callbackResponse.status });
 
         if (callbackResponse.ok) {
           const userData = await callbackResponse.json();
-          console.log("User registered successfully:", userData);
+          logToStorage("✅ User registered successfully", userData);
 
           // Clear registration data from sessionStorage
           sessionStorage.removeItem("registrationData");
@@ -160,32 +211,61 @@ function Callback() {
           if (userData.user_id) {
             // Redirect to FastAPI with user_id
             const redirectUrl = `${FASTAPI_URL}?userId=${userData.user_id}`;
-            console.log("Redirecting to:", redirectUrl);
+            logToStorage("🔄 Redirecting to backend", { url: redirectUrl, userId: userData.user_id });
+            console.log("🔄 Redirecting to backend with userId:", userData.user_id);
+            console.log("🔄 Redirect URL:", redirectUrl);
             window.location.href = redirectUrl;
           } else {
-            console.log("No user_id, redirecting to:", FASTAPI_URL);
+            console.error("❌ No user_id received from backend!");
+            console.error("❌ Response data:", userData);
+            logToStorage("⚠️ No user_id received, redirecting to backend", { url: FASTAPI_URL });
+            alert("Error: User ID not received from backend. Check console for details.");
             window.location.href = FASTAPI_URL;
           }
         } else {
           const errorText = await callbackResponse.text();
-          console.error("❌ Failed to register user. Status:", callbackResponse.status, "Error:", errorText);
-          console.error("Response details:", {
+          logToStorage("❌ Failed to register user", {
             status: callbackResponse.status,
             statusText: callbackResponse.statusText,
             error: errorText
           });
-          // Log the error but don't show alert - just redirect to backend
-          // Backend will handle showing appropriate error
-          window.location.href = FASTAPI_URL;
+          alert(`Registration failed: ${errorText}\n\nCheck console for full logs.`);
+          // Delay redirect so user can see error
+          setTimeout(() => {
+            window.location.href = FASTAPI_URL;
+          }, 3000);
           return;
         }
       } catch (error) {
-        console.error("❌ Error in auth callback:", error);
-        console.error("Error details:", error.message, error.stack);
-        // Log error but redirect to backend - let backend handle it
-        window.location.href = FASTAPI_URL;
+        logToStorage("❌ Error in auth callback", {
+          message: error.message,
+          stack: error.stack
+        });
+        alert(`Authentication error: ${error.message}\n\nCheck console for full logs.`);
+        // Delay redirect so user can see error
+        setTimeout(() => {
+          window.location.href = FASTAPI_URL;
+        }, 3000);
         return;
       }
+    }
+
+    handleCallback();
+    
+    // Cleanup function
+    return () => {
+      isProcessing = false;
+    };
+  }, [user, isAuthenticated, isLoading, getAccessTokenSilently, navigate]);
+  
+  // Display stored logs on component mount
+  useEffect(() => {
+    const storedLogs = localStorage.getItem('callback_logs');
+    if (storedLogs) {
+      console.log("📋 PREVIOUS CALLBACK LOGS:");
+      console.log(storedLogs);
+    }
+  }, []);
     }
 
     handleCallback();
