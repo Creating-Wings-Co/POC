@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('❌ Invalid userId:', userIdParam);
             // Redirect to frontend for authentication
             console.log('Redirecting to frontend for authentication');
-            window.location.href = AUTH0_NEXTJS_URL;
+            createAnonymousSession();
             return;
         }
         console.log('✅ Parsed userId as number:', userId);
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error parsing user info:', e);
             // Redirect to frontend for authentication
             console.log('Redirecting to frontend for authentication');
-            window.location.href = AUTH0_NEXTJS_URL;
+            createAnonymousSession();
         }
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('userId');
                 // Redirect to frontend for authentication
                 console.log('Redirecting to frontend for authentication');
-                window.location.href = AUTH0_NEXTJS_URL;
+                createAnonymousSession();
             } else {
                 // User is authenticated - load profile and enable chat
                 loadUserProfile(userId);
@@ -227,7 +227,7 @@ async function createUserSession(userInfo) {
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
             console.error('Failed to create user session:', error);
-            redirectToFrontend();
+            createAnonymousSession();
             return;
         }
         
@@ -255,7 +255,7 @@ async function initializeUser() {
         
         if (!authToken) {
             console.error('No auth token available');
-            redirectToFrontend();
+            createAnonymousSession();
             return;
         }
         
@@ -282,7 +282,7 @@ async function initializeUser() {
                 console.error('Token is invalid or expired - clearing and showing login');
                 localStorage.removeItem('authToken');
                 authToken = null;
-                redirectToFrontend();
+                createAnonymousSession();
                 return;
             }
             
@@ -291,7 +291,7 @@ async function initializeUser() {
                 console.error('User not found in database');
                 localStorage.removeItem('authToken');
                 authToken = null;
-                redirectToFrontend();
+                createAnonymousSession();
                 return;
             }
             
@@ -300,7 +300,7 @@ async function initializeUser() {
             alert(`Authentication error: ${errorData.detail || response.statusText}. Please try logging in again.`);
             localStorage.removeItem('authToken');
             authToken = null;
-            redirectToFrontend();
+            createAnonymousSession();
             return;
         }
         
@@ -338,7 +338,7 @@ async function loadUserProfile(userId) {
         } else {
             const errorText = await response.text();
             console.error('❌ Failed to load user profile:', response.status, errorText);
-            redirectToFrontend();
+            createAnonymousSession();
         }
     } catch (error) {
         console.error('❌ Error loading user profile:', error);
@@ -430,7 +430,7 @@ async function sendMessage() {
     
     if (!message || isWaitingForResponse || !userId) {
         if (!userId) {
-            redirectToFrontend();
+            createAnonymousSession();
         }
         return;
     }
@@ -488,7 +488,7 @@ async function sendMessage() {
                 localStorage.removeItem('userId');
                 authToken = null;
                 userId = null;
-                redirectToFrontend();
+                createAnonymousSession();
                 return;
             }
             const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
