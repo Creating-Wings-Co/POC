@@ -11,5 +11,8 @@ export const auth0Config = {
 };
 
 // FastAPI Backend URL
-export const FASTAPI_URL = process.env.REACT_APP_FASTAPI_URL || 'http://localhost:8000';
+export const FASTAPI_URL = process.env.REACT_APP_FASTAPI_URL || (() => {
+  console.warn('⚠️ REACT_APP_FASTAPI_URL not set! Using default localhost. Set this in Amplify environment variables.');
+  return 'http://localhost:8000';
+})();
 
