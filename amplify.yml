@@ -7,6 +7,7 @@ frontend:
         - npm install
     build:
       commands:
+        - export PUBLIC_URL=/
         - npm run build
   artifacts:
     baseDirectory: frontend/build
