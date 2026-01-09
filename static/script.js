@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📍 Current URL:', window.location.href);
     console.log('📍 Current search params:', window.location.search);
     
+    // Hide login modal by default - only show if user is NOT authenticated
+    hideLoginModal();
+    
     // Check for Auth0 callback (token, userId, or user info in URL)
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -27,8 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (userIdParam) {
         console.log('✅✅✅ UserId found in URL:', userIdParam);
-        // Hide login modal immediately - user is already authenticated
-        hideLoginModal();
+        // User is authenticated - keep modal hidden
         
         // Clear redirect flag since we successfully got userId
         sessionStorage.removeItem('redirectingToAuth');
@@ -97,9 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
             authToken = localStorage.getItem('authToken');
             if (authToken) {
                 console.log('Token found in localStorage, calling initializeUser...');
+                // User has token - keep modal hidden
+                hideLoginModal();
                 initializeUser();
             } else {
-                console.log('No token or userId found, showing login modal');
+                // No authentication - this is a direct backend visit
+                // Show login modal only for direct visits (not from frontend)
+                console.log('No token or userId found - direct backend visit');
                 showLoginModal();
             }
         }
