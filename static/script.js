@@ -371,7 +371,7 @@ function updateWelcomeMessage(userName) {
     const welcomeMessage = document.getElementById('welcomeMessage');
     if (welcomeMessage) {
         const name = userName || 'there';
-        welcomeMessage.innerHTML = `<p>Hi ${name}! How can I help you today?</p>`;
+        welcomeMessage.innerHTML = `<p>Hi ${name}! I'm Pia, your financial empowerment assistant from Creating Wings. How can I help you today?</p>`;
         console.log('✅ Welcome message updated');
     } else {
         console.error('❌ welcomeMessage element not found');
