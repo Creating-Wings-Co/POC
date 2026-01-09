@@ -59,7 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     } else if (token) {
         console.log('Token found in URL, length:', token.length);
-        // Token passed from Auth0 callback
+        // Token passed from Auth0 callback - user is authenticated
+        hideLoginModal();
         authToken = decodeURIComponent(token); // Decode in case it was encoded
         localStorage.setItem('authToken', authToken);
         console.log('Token stored, calling initializeUser...');
@@ -68,7 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeUser();
     } else if (userParam) {
         console.log('User info found in URL, creating session...');
-        // User info passed (fallback when token not available)
+        // User info passed (fallback when token not available) - user is authenticated
+        hideLoginModal();
         try {
             const userInfo = JSON.parse(decodeURIComponent(userParam));
             console.log('User info:', userInfo);
