@@ -11,8 +11,20 @@ export const auth0Config = {
 };
 
 // FastAPI Backend URL
-export const FASTAPI_URL = process.env.REACT_APP_FASTAPI_URL || (() => {
-  console.warn('⚠️ REACT_APP_FASTAPI_URL not set! Using default localhost. Set this in Amplify environment variables.');
-  return 'http://localhost:8000';
+export const FASTAPI_URL = (() => {
+  const url = process.env.REACT_APP_FASTAPI_URL;
+  if (!url || url.includes('localhost') || url.includes('127.0.0.1')) {
+    console.error('❌ REACT_APP_FASTAPI_URL is not set or is localhost!');
+    console.error('⚠️ Set REACT_APP_FASTAPI_URL in Amplify environment variables to your ALB DNS');
+    console.error('⚠️ Example: http://your-alb-dns-name.us-east-1.elb.amazonaws.com');
+    // In production, don't default to localhost - this will cause errors
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 Production build detected but FASTAPI_URL is missing!');
+      // Return empty string to force error, or use window.location.origin as fallback
+      return window.location.origin.replace(/:\d+$/, ':8000'); // Try to use same origin
+    }
+    return 'http://localhost:8000'; // Only for local development
+  }
+  return url;
 })();
 

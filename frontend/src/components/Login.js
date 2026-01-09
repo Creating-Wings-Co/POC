@@ -24,11 +24,9 @@ function Login() {
         });
     };
 
-    // If already authenticated, redirect to callback
-    if (isAuthenticated && !isLoading) {
-        navigate("/callback");
-        return null;
-    }
+    // Don't auto-redirect - let user click the button
+    // If already authenticated and coming from registration, allow callback
+    // Otherwise, show login page normally
 
     return (
         <div className="login-container">

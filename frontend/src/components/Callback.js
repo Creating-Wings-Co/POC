@@ -107,6 +107,12 @@ function Callback() {
         }
 
         // Call FastAPI /api/auth/callback to register/update user
+        if (!FASTAPI_URL || FASTAPI_URL.includes('localhost')) {
+          console.error("❌ FASTAPI_URL is not set or is localhost!");
+          console.error("⚠️ Set REACT_APP_FASTAPI_URL in Amplify environment variables");
+          alert("Configuration error: Backend URL not set. Please contact support.");
+          return;
+        }
         console.log("Calling FastAPI:", `${FASTAPI_URL}/api/auth/callback`);
         console.log("User info:", userInfo);
         
