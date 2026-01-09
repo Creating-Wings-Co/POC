@@ -283,19 +283,36 @@ async function loadUserProfile(userId) {
     try {
         const response = await fetch(`${API_BASE}/api/user/${userId}`);
         console.log('📡 API response status:', response.status);
+        console.log('📡 API URL:', `${API_BASE}/api/user/${userId}`);
+        
         if (response.ok) {
             const userData = await response.json();
             console.log('✅ User data received:', userData);
-            displayUserProfile(userData);
-            updateWelcomeMessage(userData.name);
-            enableChat();
+            console.log('✅ User name:', userData.name);
+            console.log('✅ User email:', userData.email);
+            
+            // Check if name is valid (not "Guest User" or empty)
+            if (userData.name && userData.name !== 'Guest User' && userData.name.trim() !== '') {
+                displayUserProfile(userData);
+                updateWelcomeMessage(userData.name);
+                enableChat();
+            } else {
+                console.warn('⚠️ User name is invalid or missing:', userData.name);
+                console.warn('⚠️ User data:', userData);
+                // Still show profile but with a default message
+                displayUserProfile(userData);
+                updateWelcomeMessage(userData.name || 'there');
+                enableChat();
+            }
         } else {
             const errorText = await response.text();
             console.error('❌ Failed to load user profile:', response.status, errorText);
+            console.error('❌ Response headers:', response.headers);
             redirectToFrontend();
         }
     } catch (error) {
         console.error('❌ Error loading user profile:', error);
+        console.error('❌ Error stack:', error.stack);
         redirectToFrontend();
     }
 }
@@ -382,10 +399,11 @@ function enableChat() {
     
     console.log('✅ Chat enabled!');
     
-    // If no userId, create anonymous session in background (don't block UI)
+    // If no userId, redirect to frontend for authentication
     if (!userId || userId === null || userId === undefined) {
-        console.log('⚠️ No userId found, creating anonymous session in background...');
-        createAnonymousSession();
+        console.log('❌ No userId found - authentication required');
+        redirectToFrontend();
+        return;
     }
 }
 
