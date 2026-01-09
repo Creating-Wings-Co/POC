@@ -189,6 +189,45 @@ function handleLogin() {
     window.location.href = `${AUTH0_NEXTJS_URL}/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
+async function createAnonymousSession() {
+    try {
+        console.log('👤 Creating anonymous session...');
+        // Call backend to create anonymous user
+        const response = await fetch(`${API_BASE}/api/user/anonymous`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            console.log('✅ Anonymous user created:', userData);
+            userId = userData.user_id;
+            localStorage.setItem('userId', userId.toString());
+            
+            // Enable chat without profile (anonymous user)
+            enableChat();
+            updateWelcomeMessage('Guest');
+            console.log('✅ Chat enabled for anonymous user');
+        } else {
+            console.error('Failed to create anonymous user, using default userId');
+            // Fallback: use userId 1 (assuming it exists or will be created)
+            userId = 1;
+            localStorage.setItem('userId', '1');
+            enableChat();
+            updateWelcomeMessage('Guest');
+        }
+    } catch (error) {
+        console.error('Error creating anonymous session:', error);
+        // Fallback: use default userId
+        userId = 1;
+        localStorage.setItem('userId', '1');
+        enableChat();
+        updateWelcomeMessage('Guest');
+    }
+}
+
 async function createUserSession(userInfo) {
     try {
         console.log('Creating user session with info:', userInfo);
@@ -382,9 +421,11 @@ function updateWelcomeMessage(userName) {
 }
 
 function enableChat() {
+    // Allow chat even without userId (for anonymous users)
+    // If userId is missing, try to create anonymous session
     if (!userId || userId === null || userId === undefined) {
-        // No userId - redirect to frontend for authentication
-        redirectToFrontend();
+        console.log('⚠️ No userId found, creating anonymous session...');
+        createAnonymousSession();
         return;
     }
     
