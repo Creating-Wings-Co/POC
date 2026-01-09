@@ -9,14 +9,23 @@ function Callback() {
 
   useEffect(() => {
     async function handleCallback() {
+      // Wait for Auth0 to finish loading
       if (isLoading) {
+        console.log("⏳ Auth0 still loading...");
         return;
       }
 
+      // Check authentication - Auth0 should be ready now
       if (!isAuthenticated || !user) {
+        console.error("❌ Not authenticated after callback");
+        console.error("Auth0 state:", { isAuthenticated, isLoading, hasUser: !!user });
+        console.error("This usually means Auth0 callback failed or user cancelled");
+        // Redirect to login
         navigate("/login");
         return;
       }
+
+      console.log("✅ User authenticated:", user.email);
 
       try {
 
@@ -147,14 +156,23 @@ function Callback() {
           }
         } else {
           const errorText = await callbackResponse.text();
-          console.error("Failed to register user. Status:", callbackResponse.status, "Error:", errorText);
-          // Silently redirect to backend - let backend handle error display
+          console.error("❌ Failed to register user. Status:", callbackResponse.status, "Error:", errorText);
+          console.error("Response details:", {
+            status: callbackResponse.status,
+            statusText: callbackResponse.statusText,
+            error: errorText
+          });
+          // Log the error but don't show alert - just redirect to backend
+          // Backend will handle showing appropriate error
           window.location.href = FASTAPI_URL;
+          return;
         }
       } catch (error) {
-        console.error("Error in auth callback:", error);
-        // Silently redirect to backend - let backend handle error display
+        console.error("❌ Error in auth callback:", error);
+        console.error("Error details:", error.message, error.stack);
+        // Log error but redirect to backend - let backend handle it
         window.location.href = FASTAPI_URL;
+        return;
       }
     }
 
