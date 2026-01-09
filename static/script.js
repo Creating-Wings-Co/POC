@@ -6,29 +6,7 @@ let authToken = null;
 
 // API base URL
 const API_BASE = window.location.origin;
-// Frontend URL - should be your Amplify URL
-// Try to detect from referrer or use environment variable
-const AUTH0_NEXTJS_URL = (() => {
-  // Check if we have a referrer from frontend
-  const referrer = document.referrer;
-  if (referrer && (referrer.includes('amplifyapp.com') || referrer.includes('localhost:3000'))) {
-    // Extract origin from referrer
-    try {
-      const url = new URL(referrer);
-      return url.origin;
-    } catch (e) {
-      console.error('Error parsing referrer:', e);
-    }
-  }
-  // Default to Amplify URL (update this to your actual Amplify URL)
-  // You can also set this via a meta tag or data attribute in index.html
-  const frontendUrlMeta = document.querySelector('meta[name="frontend-url"]');
-  if (frontendUrlMeta) {
-    return frontendUrlMeta.getAttribute('content');
-  }
-  // Fallback - update this to your Amplify URL
-  return 'https://main.d1pwp2vzr2ooxw.amplifyapp.com';
-})();
+// No frontend redirects - backend is standalone
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -153,9 +131,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Login modal removed - backend only accessible after frontend authentication
 // All unauthenticated users are redirected to frontend
+// No redirects - backend is standalone
 function redirectToFrontend() {
-    console.log('Redirecting to frontend for authentication');
-    window.location.href = AUTH0_NEXTJS_URL;
+    // Don't redirect - create anonymous session instead
+    console.log('No authentication - creating anonymous session');
+    createAnonymousSession();
 }
 
 function handleLogin() {
