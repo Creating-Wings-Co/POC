@@ -172,15 +172,15 @@ function Callback() {
         }
         
         console.log("✅ FASTAPI_URL is set:", FASTAPI_URL);
-        logToStorage("📞 Calling FastAPI", { url: `${FASTAPI_URL}/api/auth/callback` });
-        logToStorage("📤 User info being sent", userInfo);
+        console.log("📞 Redirecting to FastAPI:", `${FASTAPI_URL}/api/auth/callback`);
+        console.log("📤 User info being sent:", userInfo);
         
         // WORKAROUND: HTTPS → HTTP mixed content blocks fetch()
         // Instead, redirect to backend with user data in URL
         // Backend will handle saving user and redirecting to chatbot
         
         console.log("🔄 Using redirect workaround for HTTPS → HTTP");
-        logToStorage("🔄 Redirecting to backend with user data (HTTPS → HTTP workaround)");
+        console.log("🔄 Redirecting to backend with user data (HTTPS → HTTP workaround)");
         
         // Encode user info as URL params
         const userParams = new URLSearchParams({
