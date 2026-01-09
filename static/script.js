@@ -105,11 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // User has token - initialize user session
                 initializeUser();
             } else {
-                // No authentication - create anonymous session for direct access
-                console.log('⚠️ No authentication found - creating anonymous session');
+                // No authentication - enable chat immediately, then create anonymous session
+                console.log('⚠️ No authentication found - enabling chat directly');
                 console.log('💡 Users can access chatbot directly without authentication');
                 
-                // Create anonymous user session
+                // Enable chat immediately (shows input box)
+                enableChat();
+                // Create anonymous session in background (gets userId)
                 createAnonymousSession();
             }
         }
