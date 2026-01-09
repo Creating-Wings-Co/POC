@@ -15,7 +15,7 @@ export const FASTAPI_URL = (() => {
   let url = process.env.REACT_APP_FASTAPI_URL;
   if (!url || url.includes('localhost') || url.includes('127.0.0.1')) {
     console.error('❌ REACT_APP_FASTAPI_URL is not set or is localhost!');
-    console.error('⚠️ Set REACT_APP_FASTAPI_URL in Amplify environment variables to your ALB DNS');
+    console.error('⚠️ Set REACT_APP_FASTAPI_URL in Vercel environment variables to your ALB DNS');
     console.error('⚠️ Example: https://your-alb-dns-name.us-east-1.elb.amazonaws.com');
     // In production, don't default to localhost - this will cause errors
     if (process.env.NODE_ENV === 'production') {
@@ -25,12 +25,13 @@ export const FASTAPI_URL = (() => {
     return 'http://localhost:8000'; // Only for local development
   }
   
-  // Force HTTPS if frontend is HTTPS (to avoid mixed content errors)
+  // Note: If frontend is HTTPS and backend is HTTP, browsers will block requests (mixed content)
+  // This is a browser security feature. You'll need to set up HTTPS on ALB for this to work.
   if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
-    console.warn('⚠️ Frontend is HTTPS but backend URL is HTTP. Converting to HTTPS...');
-    url = url.replace('http://', 'https://');
-    console.warn('⚠️ Updated URL:', url);
-    console.warn('⚠️ Make sure your ALB has HTTPS configured!');
+    console.error('❌ MIXED CONTENT ERROR: Frontend is HTTPS but backend is HTTP');
+    console.error('⚠️ Browsers will block HTTP requests from HTTPS pages');
+    console.error('⚠️ Solution: Set up HTTPS on your ALB (requires domain name)');
+    console.error('⚠️ For now, this will fail. See ALB_HTTPS_SETUP.md for instructions');
   }
   
   return url;
