@@ -127,12 +127,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // User has token - initialize user session
                 initializeUser();
             } else {
-                // No authentication - redirect to frontend immediately
-                // Backend should only be accessed after frontend authentication
-                console.log('❌ No authentication found - redirecting to frontend');
-                console.log('Frontend URL:', AUTH0_NEXTJS_URL);
-                window.location.href = AUTH0_NEXTJS_URL;
-                return; // Stop execution
+                // No authentication - create anonymous session for direct access
+                console.log('⚠️ No authentication found - creating anonymous session');
+                console.log('💡 Users can access chatbot directly without authentication');
+                
+                // Create anonymous user session
+                createAnonymousSession();
             }
         }
     }
@@ -226,7 +226,7 @@ async function createUserSession(userInfo) {
         updateWelcomeMessage(userData.name);
     } catch (error) {
         console.error('Error creating user session:', error);
-        showLoginModal();
+        redirectToFrontend();
     }
 }
 
@@ -323,7 +323,7 @@ async function loadUserProfile(userId) {
         }
     } catch (error) {
         console.error('❌ Error loading user profile:', error);
-        showLoginModal();
+        redirectToFrontend();
     }
 }
 

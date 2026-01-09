@@ -283,6 +283,42 @@ async def get_user_by_id(user_id: int):
     }
 
 
+@app.post("/api/user/anonymous")
+async def create_anonymous_user():
+    """Create an anonymous user for direct backend access"""
+    # Create anonymous user with default values
+    anonymous_sub = f"anonymous_{uuid.uuid4().hex[:12]}"
+    user_id = db.create_or_update_user_from_auth0(
+        auth0_sub=anonymous_sub,
+        name="Guest User",
+        email=f"guest_{uuid.uuid4().hex[:8]}@anonymous.local",
+        picture=None,
+        phone=None,
+        age=None,
+        financial_goals=None,
+        income_range=None,
+        employment_status=None,
+        marital_status=None,
+        dependents=None,
+        investment_experience=None,
+        risk_tolerance=None,
+        education=None,
+        location=None,
+        username=None
+    )
+    
+    if not user_id:
+        raise HTTPException(status_code=500, detail="Failed to create anonymous user")
+    
+    user = db.get_user(user_id)
+    return UserResponse(
+        user_id=user_id,
+        name=user['name'],
+        email=user['email'],
+        created_at=user['created_at']
+    )
+
+
 @app.post("/api/register", response_model=UserResponse)
 async def register_user(user_data: UserRegistration):
     """Register a new user (legacy endpoint - kept for backwards compatibility)"""
