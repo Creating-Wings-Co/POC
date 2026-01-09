@@ -175,70 +175,43 @@ function Callback() {
         logToStorage("📞 Calling FastAPI", { url: `${FASTAPI_URL}/api/auth/callback` });
         logToStorage("📤 User info being sent", userInfo);
         
-        // Check for mixed content (HTTPS → HTTP)
-        if (window.location.protocol === 'https:' && FASTAPI_URL.startsWith('http://')) {
-          console.error("❌ MIXED CONTENT BLOCKED: HTTPS frontend cannot call HTTP backend");
-          console.error("⚠️ Browser will block this request");
-          console.error("⚠️ Solution: Set up HTTPS on your ALB");
-          alert("Error: Cannot connect to backend. Your frontend is HTTPS but backend is HTTP.\n\nPlease set up HTTPS on your ALB or contact support.");
-          return;
+        // WORKAROUND: HTTPS → HTTP mixed content blocks fetch()
+        // Instead, redirect to backend with user data in URL
+        // Backend will handle saving user and redirecting to chatbot
+        
+        console.log("🔄 Using redirect workaround for HTTPS → HTTP");
+        logToStorage("🔄 Redirecting to backend with user data (HTTPS → HTTP workaround)");
+        
+        // Encode user info as URL params
+        const userParams = new URLSearchParams({
+          sub: userInfo.sub || '',
+          name: userInfo.name || '',
+          email: userInfo.email || '',
+          picture: userInfo.picture || '',
+          phone: userInfo.phone || '',
+          age: userInfo.age || '',
+          financial_goals: userInfo.financial_goals || '',
+          income_range: userInfo.income_range || '',
+          employment_status: userInfo.employment_status || '',
+          marital_status: userInfo.marital_status || '',
+          dependents: userInfo.dependents || '',
+          investment_experience: userInfo.investment_experience || '',
+          risk_tolerance: userInfo.risk_tolerance || '',
+          education: userInfo.education || '',
+          location: userInfo.location || '',
+          username: userInfo.username || '',
+          isRegistration: sessionStorage.getItem('isRegistration') || 'false'
+        });
+        
+        // Store registration data in sessionStorage as backup
+        if (sessionStorage.getItem('registrationData')) {
+          sessionStorage.setItem('pendingRegistration', sessionStorage.getItem('registrationData'));
         }
         
-        const callbackResponse = await fetch(`${FASTAPI_URL}/api/auth/callback`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(userInfo),
-          mode: 'cors',
-        }).catch(error => {
-          console.error("❌ Fetch error (likely mixed content):", error);
-          alert(`Connection error: ${error.message}\n\nThis is likely because your frontend (HTTPS) cannot connect to backend (HTTP).\n\nPlease set up HTTPS on your ALB.`);
-          throw error;
-        });
-
-        logToStorage("📥 FastAPI response status", { status: callbackResponse.status });
-
-        if (callbackResponse.ok) {
-          const userData = await callbackResponse.json();
-          logToStorage("✅ User registered successfully", userData);
-
-          // Clear registration data from sessionStorage
-          sessionStorage.removeItem("registrationData");
-          sessionStorage.removeItem("isRegistration");
-
-          if (userData.user_id) {
-            // Redirect to FastAPI with user_id
-            const redirectUrl = `${FASTAPI_URL}?userId=${userData.user_id}`;
-            logToStorage("🔄 Redirecting to backend", { url: redirectUrl, userId: userData.user_id });
-            console.log("🔄 Redirecting to backend with userId:", userData.user_id);
-            console.log("🔄 Redirect URL:", redirectUrl);
-            // Store userId in sessionStorage as backup (in case URL param is lost)
-            sessionStorage.setItem('auth_userId', userData.user_id.toString());
-            // Use replace to avoid back button issues
-            window.location.replace(redirectUrl);
-          } else {
-            console.error("❌ No user_id received from backend!");
-            console.error("❌ Response data:", userData);
-            logToStorage("⚠️ No user_id received, redirecting to backend", { url: FASTAPI_URL });
-            alert("Error: User ID not received from backend. Check console for details.");
-            window.location.href = FASTAPI_URL;
-          }
-        } else {
-          const errorText = await callbackResponse.text();
-          logToStorage("❌ Failed to register user", {
-            status: callbackResponse.status,
-            statusText: callbackResponse.statusText,
-            error: errorText
-          });
-          alert(`Registration failed: ${errorText}\n\nCheck console for full logs.`);
-          // Delay redirect so user can see error
-          setTimeout(() => {
-            window.location.href = FASTAPI_URL;
-          }, 3000);
-          return;
-        }
+        // Redirect to backend auth endpoint
+        const redirectUrl = `${FASTAPI_URL}/api/auth/callback?${userParams.toString()}`;
+        console.log("🔄 Redirecting to backend:", redirectUrl);
+        window.location.replace(redirectUrl);
       } catch (error) {
         logToStorage("❌ Error in auth callback", {
           message: error.message,
