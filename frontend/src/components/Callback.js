@@ -8,20 +8,32 @@ function Callback() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isProcessing = false;
+    
     async function handleCallback() {
+      // Prevent multiple executions
+      if (isProcessing) {
+        console.log("⏳ Already processing callback...");
+        return;
+      }
+      
       // Wait for Auth0 to finish loading
       if (isLoading) {
         console.log("⏳ Auth0 still loading...");
         return;
       }
 
+      isProcessing = true;
+      console.log("🔄 Processing callback...", { isAuthenticated, isLoading, hasUser: !!user });
+
       // Check authentication - Auth0 should be ready now
       if (!isAuthenticated || !user) {
         console.error("❌ Not authenticated after callback");
         console.error("Auth0 state:", { isAuthenticated, isLoading, hasUser: !!user });
         console.error("This usually means Auth0 callback failed or user cancelled");
-        // Redirect to login
-        navigate("/login");
+        isProcessing = false;
+        // Use window.location instead of navigate to prevent React Router loops
+        window.location.href = "/login";
         return;
       }
 
