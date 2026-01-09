@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (userIdParam) {
         console.log('✅✅✅ UserId found in URL:', userIdParam);
+        // Hide login modal immediately - user is already authenticated
+        hideLoginModal();
+        
         // Clear redirect flag since we successfully got userId
         sessionStorage.removeItem('redirectingToAuth');
         
@@ -49,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Small delay to ensure DOM is ready, then load profile and enable chat
         setTimeout(() => {
             console.log('✅ Loading user profile and enabling chat...');
-            hideLoginModal();
             loadUserProfile(userId);
             console.log('✅✅✅ Profile loading initiated!');
         }, 100);

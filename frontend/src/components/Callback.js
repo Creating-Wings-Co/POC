@@ -142,13 +142,12 @@ function Callback() {
         } else {
           const errorText = await callbackResponse.text();
           console.error("Failed to register user. Status:", callbackResponse.status, "Error:", errorText);
-          alert(`Registration failed: ${errorText}. Redirecting to backend...`);
+          // Silently redirect to backend - let backend handle error display
           window.location.href = FASTAPI_URL;
         }
       } catch (error) {
         console.error("Error in auth callback:", error);
-        alert(`Error: ${error.message}. Check console for details.`);
-        // Still try to redirect to backend
+        // Silently redirect to backend - let backend handle error display
         window.location.href = FASTAPI_URL;
       }
     }
