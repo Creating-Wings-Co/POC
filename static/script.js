@@ -37,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isNaN(userId)) {
             console.error('❌ Invalid userId:', userIdParam);
             // Redirect to frontend for authentication
-            console.log('Redirecting to frontend for authentication');
-            createAnonymousSession();
+            console.log('❌ Invalid userId - redirecting to frontend');
+            redirectToFrontend();
             return;
         }
         console.log('✅ Parsed userId as number:', userId);
@@ -76,8 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error('Error parsing user info:', e);
             // Redirect to frontend for authentication
-            console.log('Redirecting to frontend for authentication');
-            createAnonymousSession();
+            console.log('❌ Error parsing user info - redirecting to frontend');
+            redirectToFrontend();
         }
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -92,8 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('❌ Invalid userId in localStorage:', storedUserId);
                 localStorage.removeItem('userId');
                 // Redirect to frontend for authentication
-                console.log('Redirecting to frontend for authentication');
-                createAnonymousSession();
+                console.log('❌ Invalid userId - redirecting to frontend');
+                redirectToFrontend();
             } else {
                 // User is authenticated - load profile and enable chat
                 loadUserProfile(userId);
@@ -105,14 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // User has token - initialize user session
                 initializeUser();
             } else {
-                // No authentication - enable chat immediately, then create anonymous session
-                console.log('⚠️ No authentication found - enabling chat directly');
-                console.log('💡 Users can access chatbot directly without authentication');
-                
-                // Enable chat immediately (shows input box)
-                enableChat();
-                // Create anonymous session in background (gets userId)
-                createAnonymousSession();
+                // No authentication - redirect to frontend
+                console.log('❌ No authentication found - authentication required');
+                console.log('💡 Please sign in through the frontend application');
+                redirectToFrontend();
             }
         }
     }
@@ -131,60 +127,38 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton.addEventListener('click', sendMessage);
 });
 
-// Login modal removed - backend only accessible after frontend authentication
-// All unauthenticated users are redirected to frontend
-// No redirects - backend is standalone
+// Backend requires authentication - redirect unauthenticated users to frontend
 function redirectToFrontend() {
-    // Don't redirect - create anonymous session instead
-    console.log('No authentication - creating anonymous session');
-    createAnonymousSession();
+    // Get frontend URL from environment or use default
+    const frontendUrl = process.env.REACT_APP_FRONTEND_URL || 'https://your-app-name.vercel.app';
+    
+    console.log('🔐 Authentication required - redirecting to frontend:', frontendUrl);
+    
+    // Show message to user
+    const chatContainer = document.getElementById('chatContainer');
+    if (chatContainer) {
+        chatContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                <h2>Authentication Required</h2>
+                <p>Please sign in through the frontend application to access the chatbot.</p>
+                <p><a href="${frontendUrl}" style="color: #007bff; text-decoration: none;">Go to Frontend →</a></p>
+            </div>
+        `;
+    }
+    
+    // Also redirect after 3 seconds
+    setTimeout(() => {
+        window.location.href = frontendUrl;
+    }, 3000);
 }
 
 function handleLogin() {
-    // No login needed - backend is standalone
-    // Create anonymous session instead
-    console.log('🔐 Creating anonymous session for direct access');
-    createAnonymousSession();
+    // Redirect to frontend for authentication
+    redirectToFrontend();
 }
 
-async function createAnonymousSession() {
-    try {
-        console.log('👤 Creating anonymous session...');
-        // Call backend to create anonymous user
-        const response = await fetch(`${API_BASE}/api/user/anonymous`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-        
-        if (response.ok) {
-            const userData = await response.json();
-            console.log('✅ Anonymous user created:', userData);
-            userId = userData.user_id;
-            localStorage.setItem('userId', userId.toString());
-            
-            // Update welcome message (chat already enabled)
-            updateWelcomeMessage('Guest');
-            console.log('✅ Anonymous session created, userId:', userId);
-        } else {
-            const errorText = await response.text();
-            console.error('Failed to create anonymous user:', response.status, errorText);
-            // Fallback: use userId 1 (assuming it exists or will be created)
-            userId = 1;
-            localStorage.setItem('userId', '1');
-            updateWelcomeMessage('Guest');
-            console.log('✅ Using fallback userId: 1');
-        }
-    } catch (error) {
-        console.error('Error creating anonymous session:', error);
-        // Fallback: use default userId
-        userId = 1;
-        localStorage.setItem('userId', '1');
-        updateWelcomeMessage('Guest');
-        console.log('✅ Using fallback userId: 1 (error fallback)');
-    }
-}
+// Anonymous session creation removed - authentication required
+// Users must authenticate through frontend before accessing backend
 
 async function createUserSession(userInfo) {
     try {
@@ -232,8 +206,8 @@ async function initializeUser() {
         console.log('Initializing user with token:', authToken ? 'Token present' : 'No token');
         
         if (!authToken) {
-            console.error('No auth token available');
-            createAnonymousSession();
+            console.error('❌ No auth token available - redirecting to frontend');
+            redirectToFrontend();
             return;
         }
         
@@ -257,28 +231,28 @@ async function initializeUser() {
             
             if (response.status === 401) {
                 // Token expired or invalid
-                console.error('Token is invalid or expired - clearing and showing login');
+                console.error('❌ Token is invalid or expired - redirecting to frontend');
                 localStorage.removeItem('authToken');
                 authToken = null;
-                createAnonymousSession();
+                redirectToFrontend();
                 return;
             }
             
             if (response.status === 404) {
                 // User not found - this shouldn't happen now but handle it
-                console.error('User not found in database');
+                console.error('❌ User not found in database - redirecting to frontend');
                 localStorage.removeItem('authToken');
                 authToken = null;
-                createAnonymousSession();
+                redirectToFrontend();
                 return;
             }
             
             // Other errors
-            console.error('Unexpected error:', errorData);
-            alert(`Authentication error: ${errorData.detail || response.statusText}. Please try logging in again.`);
+            console.error('❌ Unexpected error:', errorData);
+            alert(`Authentication error: ${errorData.detail || response.statusText}. Redirecting to login...`);
             localStorage.removeItem('authToken');
             authToken = null;
-            createAnonymousSession();
+            redirectToFrontend();
             return;
         }
         
