@@ -213,7 +213,7 @@ function Callback() {
         console.log("🔄 Redirecting to backend:", redirectUrl);
         window.location.replace(redirectUrl);
       } catch (error) {
-        logToStorage("❌ Error in auth callback", {
+        console.error("❌ Error in auth callback:", {
           message: error.message,
           stack: error.stack
         });
