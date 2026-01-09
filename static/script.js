@@ -162,25 +162,25 @@ async function createAnonymousSession() {
             userId = userData.user_id;
             localStorage.setItem('userId', userId.toString());
             
-            // Enable chat without profile (anonymous user)
-            enableChat();
+            // Update welcome message (chat already enabled)
             updateWelcomeMessage('Guest');
-            console.log('✅ Chat enabled for anonymous user');
+            console.log('✅ Anonymous session created, userId:', userId);
         } else {
-            console.error('Failed to create anonymous user, using default userId');
+            const errorText = await response.text();
+            console.error('Failed to create anonymous user:', response.status, errorText);
             // Fallback: use userId 1 (assuming it exists or will be created)
             userId = 1;
             localStorage.setItem('userId', '1');
-            enableChat();
             updateWelcomeMessage('Guest');
+            console.log('✅ Using fallback userId: 1');
         }
     } catch (error) {
         console.error('Error creating anonymous session:', error);
         // Fallback: use default userId
         userId = 1;
         localStorage.setItem('userId', '1');
-        enableChat();
         updateWelcomeMessage('Guest');
+        console.log('✅ Using fallback userId: 1 (error fallback)');
     }
 }
 
@@ -377,26 +377,38 @@ function updateWelcomeMessage(userName) {
 }
 
 function enableChat() {
-    // Allow chat even without userId (for anonymous users)
-    // If userId is missing, try to create anonymous session
-    if (!userId || userId === null || userId === undefined) {
-        console.log('⚠️ No userId found, creating anonymous session...');
-        createAnonymousSession();
-        return;
-    }
+    console.log('🔓 Enabling chat...', { userId });
     
     const chatInputContainer = document.getElementById('chatInputContainer');
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
     
-    if (!chatInputContainer || !chatInput || !sendButton) {
+    if (!chatInputContainer) {
+        console.error('❌ chatInputContainer not found!');
+        return;
+    }
+    if (!chatInput) {
+        console.error('❌ chatInput not found!');
+        return;
+    }
+    if (!sendButton) {
+        console.error('❌ sendButton not found!');
         return;
     }
     
+    // Show chat input container
     chatInputContainer.style.display = 'block';
     chatInput.disabled = false;
     sendButton.disabled = false;
     chatInput.focus();
+    
+    console.log('✅ Chat enabled!');
+    
+    // If no userId, create anonymous session in background (don't block UI)
+    if (!userId || userId === null || userId === undefined) {
+        console.log('⚠️ No userId found, creating anonymous session in background...');
+        createAnonymousSession();
+    }
 }
 
 
