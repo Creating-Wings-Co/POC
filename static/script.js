@@ -179,7 +179,7 @@ async function createUserSession(userInfo) {
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
             console.error('Failed to create user session:', error);
-            createAnonymousSession();
+            redirectToFrontend();
             return;
         }
         
@@ -290,7 +290,7 @@ async function loadUserProfile(userId) {
         } else {
             const errorText = await response.text();
             console.error('❌ Failed to load user profile:', response.status, errorText);
-            createAnonymousSession();
+            redirectToFrontend();
         }
     } catch (error) {
         console.error('❌ Error loading user profile:', error);
@@ -394,7 +394,7 @@ async function sendMessage() {
     
     if (!message || isWaitingForResponse || !userId) {
         if (!userId) {
-            createAnonymousSession();
+            redirectToFrontend();
         }
         return;
     }
@@ -452,7 +452,7 @@ async function sendMessage() {
                 localStorage.removeItem('userId');
                 authToken = null;
                 userId = null;
-                createAnonymousSession();
+                redirectToFrontend();
                 return;
             }
             const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
