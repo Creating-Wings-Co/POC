@@ -6,16 +6,35 @@ let authToken = null;
 
 // API base URL
 const API_BASE = window.location.origin;
-const AUTH0_NEXTJS_URL = 'http://localhost:3000'; // Update if different
+// Frontend URL - should be your Amplify URL
+// Try to detect from referrer or use environment variable
+const AUTH0_NEXTJS_URL = (() => {
+  // Check if we have a referrer from frontend
+  const referrer = document.referrer;
+  if (referrer && (referrer.includes('amplifyapp.com') || referrer.includes('localhost:3000'))) {
+    // Extract origin from referrer
+    try {
+      const url = new URL(referrer);
+      return url.origin;
+    } catch (e) {
+      console.error('Error parsing referrer:', e);
+    }
+  }
+  // Default to Amplify URL (update this to your actual Amplify URL)
+  // You can also set this via a meta tag or data attribute in index.html
+  const frontendUrlMeta = document.querySelector('meta[name="frontend-url"]');
+  if (frontendUrlMeta) {
+    return frontendUrlMeta.getAttribute('content');
+  }
+  // Fallback - update this to your Amplify URL
+  return 'https://main.d1pwp2vzr2ooxw.amplifyapp.com';
+})();
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM Content Loaded');
     console.log('📍 Current URL:', window.location.href);
     console.log('📍 Current search params:', window.location.search);
-    
-    // Hide login modal by default - only show if user is NOT authenticated
-    hideLoginModal();
     
     // Check for Auth0 callback (token, userId, or user info in URL)
     const urlParams = new URLSearchParams(window.location.search);
@@ -39,7 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
         userId = parseInt(userIdParam);
         if (isNaN(userId)) {
             console.error('❌ Invalid userId:', userIdParam);
-            showLoginModal();
+            // Redirect to frontend for authentication
+            console.log('Redirecting to frontend for authentication');
+            window.location.href = AUTH0_NEXTJS_URL;
             return;
         }
         console.log('✅ Parsed userId as number:', userId);
@@ -60,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (token) {
         console.log('Token found in URL, length:', token.length);
         // Token passed from Auth0 callback - user is authenticated
-        hideLoginModal();
         authToken = decodeURIComponent(token); // Decode in case it was encoded
         localStorage.setItem('authToken', authToken);
         console.log('Token stored, calling initializeUser...');
@@ -70,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (userParam) {
         console.log('User info found in URL, creating session...');
         // User info passed (fallback when token not available) - user is authenticated
-        hideLoginModal();
         try {
             const userInfo = JSON.parse(decodeURIComponent(userParam));
             console.log('User info:', userInfo);
@@ -78,7 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
             createUserSession(userInfo);
         } catch (e) {
             console.error('Error parsing user info:', e);
-            showLoginModal();
+            // Redirect to frontend for authentication
+            console.log('Redirecting to frontend for authentication');
+            window.location.href = AUTH0_NEXTJS_URL;
         }
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -92,34 +113,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(userId)) {
                 console.error('❌ Invalid userId in localStorage:', storedUserId);
                 localStorage.removeItem('userId');
-                showLoginModal();
+                // Redirect to frontend for authentication
+                console.log('Redirecting to frontend for authentication');
+                window.location.href = AUTH0_NEXTJS_URL;
             } else {
-                hideLoginModal();
+                // User is authenticated - load profile and enable chat
                 loadUserProfile(userId);
             }
         } else {
             authToken = localStorage.getItem('authToken');
             if (authToken) {
                 console.log('Token found in localStorage, calling initializeUser...');
-                // User has token - keep modal hidden
-                hideLoginModal();
+                // User has token - initialize user session
                 initializeUser();
             } else {
-                // No authentication - this is a direct backend visit
-                // Show login modal only for direct visits (not from frontend)
-                console.log('No token or userId found - direct backend visit');
-                showLoginModal();
+                // No authentication - redirect to frontend immediately
+                // Backend should only be accessed after frontend authentication
+                console.log('❌ No authentication found - redirecting to frontend');
+                console.log('Frontend URL:', AUTH0_NEXTJS_URL);
+                window.location.href = AUTH0_NEXTJS_URL;
+                return; // Stop execution
             }
         }
-    }
-    
-    // Login button handler
-    const loginButton = document.getElementById('loginButton');
-    if (loginButton) {
-        loginButton.addEventListener('click', handleLogin);
-        console.log('Login button event listener attached');
-    } else {
-        console.error('Login button not found!');
     }
     
     // Chat input handler
@@ -136,12 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton.addEventListener('click', sendMessage);
 });
 
-function showLoginModal() {
-    document.getElementById('loginModal').style.display = 'flex';
-}
-
-function hideLoginModal() {
-    document.getElementById('loginModal').style.display = 'none';
+// Login modal removed - backend only accessible after frontend authentication
+// All unauthenticated users are redirected to frontend
+function redirectToFrontend() {
+    console.log('Redirecting to frontend for authentication');
+    window.location.href = AUTH0_NEXTJS_URL;
 }
 
 function handleLogin() {
@@ -194,7 +208,7 @@ async function createUserSession(userInfo) {
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
             console.error('Failed to create user session:', error);
-            showLoginModal();
+            redirectToFrontend();
             return;
         }
         
@@ -204,7 +218,7 @@ async function createUserSession(userInfo) {
         userId = userData.user_id;
         localStorage.setItem('userId', userId);
         
-        hideLoginModal();
+        // Modal removed - user authenticated
         displayUserProfile(userData);
         enableChat();
         
@@ -222,7 +236,7 @@ async function initializeUser() {
         
         if (!authToken) {
             console.error('No auth token available');
-            showLoginModal();
+            redirectToFrontend();
             return;
         }
         
@@ -249,7 +263,7 @@ async function initializeUser() {
                 console.error('Token is invalid or expired - clearing and showing login');
                 localStorage.removeItem('authToken');
                 authToken = null;
-                showLoginModal();
+                redirectToFrontend();
                 return;
             }
             
@@ -258,7 +272,7 @@ async function initializeUser() {
                 console.error('User not found in database');
                 localStorage.removeItem('authToken');
                 authToken = null;
-                showLoginModal();
+                redirectToFrontend();
                 return;
             }
             
@@ -267,7 +281,7 @@ async function initializeUser() {
             alert(`Authentication error: ${errorData.detail || response.statusText}. Please try logging in again.`);
             localStorage.removeItem('authToken');
             authToken = null;
-            showLoginModal();
+            redirectToFrontend();
             return;
         }
         
@@ -277,7 +291,7 @@ async function initializeUser() {
         userId = userData.user_id;
         localStorage.setItem('userId', userId);
         
-        hideLoginModal();
+        // Modal removed - user authenticated
         displayUserProfile(userData);
         enableChat();
         
@@ -305,7 +319,7 @@ async function loadUserProfile(userId) {
         } else {
             const errorText = await response.text();
             console.error('❌ Failed to load user profile:', response.status, errorText);
-            showLoginModal();
+            redirectToFrontend();
         }
     } catch (error) {
         console.error('❌ Error loading user profile:', error);
@@ -399,7 +413,7 @@ async function sendMessage() {
     
     if (!message || isWaitingForResponse || !userId) {
         if (!userId) {
-            showLoginModal();
+            redirectToFrontend();
         }
         return;
     }
@@ -457,7 +471,7 @@ async function sendMessage() {
                 localStorage.removeItem('userId');
                 authToken = null;
                 userId = null;
-                showLoginModal();
+                redirectToFrontend();
                 return;
             }
             const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
