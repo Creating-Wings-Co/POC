@@ -129,8 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Backend requires authentication - redirect unauthenticated users to frontend
 function redirectToFrontend() {
-    // Get frontend URL from environment or use default
-    const frontendUrl = process.env.REACT_APP_FRONTEND_URL || 'https://your-app-name.vercel.app';
+    // TODO: Replace 'your-app-name.vercel.app' with your actual Vercel frontend URL
+    // Example: 'https://creating-wings-frontend.vercel.app'
+    const frontendUrl = 'https://poc-sigma-ten.vercel.app'; // ⚠️ UPDATE THIS WITH YOUR VERCEL URL!
     
     console.log('🔐 Authentication required - redirecting to frontend:', frontendUrl);
     
@@ -138,10 +139,11 @@ function redirectToFrontend() {
     const chatContainer = document.getElementById('chatContainer');
     if (chatContainer) {
         chatContainer.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #666;">
-                <h2>Authentication Required</h2>
-                <p>Please sign in through the frontend application to access the chatbot.</p>
-                <p><a href="${frontendUrl}" style="color: #007bff; text-decoration: none;">Go to Frontend →</a></p>
+            <div style="text-align: center; padding: 40px; color: #666; max-width: 500px; margin: 50px auto;">
+                <h2 style="color: #333; margin-bottom: 20px;">Authentication Required</h2>
+                <p style="margin-bottom: 20px;">Please sign in through the frontend application to access Pia, your financial empowerment assistant from Creating Wings.</p>
+                <a href="${frontendUrl}" style="display: inline-block; padding: 12px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">Go to Frontend →</a>
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">Redirecting automatically in 3 seconds...</p>
             </div>
         `;
     }
