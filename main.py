@@ -192,6 +192,7 @@ async def auth_callback(user_info: Auth0UserInfo, authorization: Optional[str] =
         email = user_info.email
     
     # Create or update user in database with metadata
+    logger.info(f"Creating/updating user - auth0_sub: {auth0_sub}, name: {name}, email: {email}")
     user_id = db.create_or_update_user_from_auth0(
         auth0_sub=auth0_sub,
         name=name,
@@ -215,6 +216,7 @@ async def auth_callback(user_info: Auth0UserInfo, authorization: Optional[str] =
         raise HTTPException(status_code=500, detail="Failed to create/update user")
     
     user = db.get_user(user_id)
+    logger.info(f"User retrieved - id: {user_id}, name: {user.get('name')}, email: {user.get('email')}")
     
     return UserResponse(
         user_id=user_id,

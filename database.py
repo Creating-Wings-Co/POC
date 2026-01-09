@@ -259,8 +259,9 @@ class Database:
             existing = cursor.fetchone()
             
             if existing:
-                # Update existing user with all metadata
+                # Update existing user with all metadata (ALWAYS update name from Auth0)
                 user_id = existing['id']
+                logger.info(f"Updating existing user {user_id} with Auth0 data - name: {name}, email: {email}")
                 cursor.execute(
                     """UPDATE users SET name = ?, email = ?, phone = ?, age = ?, 
                        financial_goals = ?, income_range = ?, employment_status = ?, 
@@ -272,6 +273,7 @@ class Database:
                      employment_status, marital_status, dependents, investment_experience,
                      risk_tolerance, education, location, username, auth0_sub)
                 )
+                logger.info(f"User {user_id} updated successfully - new name: {name}")
             else:
                 # Check if user exists by email (for migration)
                 cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
